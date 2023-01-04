@@ -20,6 +20,17 @@ int main(int argc, char* argv[]) {
     std::clog << "----- Arguments No." << i + 1 << ": " << argv[i] << std::endl;
   }
 
+  swr::Renderer renderer{};
+
+  try {
+    renderer.Init();
+    renderer.Loop();
+    renderer.Terminate();
+  } catch (const std::exception& e) {
+    std::cerr << e.what() << '\n';
+    return EXIT_FAILURE;
+  }
+
   std::clog << "----- Terminating -----" << std::endl;
 
   return EXIT_SUCCESS;
