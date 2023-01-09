@@ -21,6 +21,11 @@ int main(int argc, char* argv[]) {
   }
 
   swr::Renderer renderer{};
+  if (2 == argc) {
+    renderer.LoadModel(argv[1]);
+  } else {
+    renderer.LoadModel();
+  }
 
   try {
     renderer.Init();

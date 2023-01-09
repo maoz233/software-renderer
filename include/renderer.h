@@ -13,11 +13,13 @@
 #include <string>
 
 #include "SDL.h"
+#include "model.h"
 
 namespace swr {
 const int WIDTH = 800;
 const int HEIGHT = 600;
 const std::string TITLE("Software Renderer");
+const std::string MODEL_FILENAME("../../obj/african_head.obj");
 
 class Renderer {
  public:
@@ -27,6 +29,7 @@ class Renderer {
   void Init();
   void Loop();
   void Terminate();
+  void LoadModel(const std::string& filename = MODEL_FILENAME);
 
   void CreateWindow(const std::string& title, const int& width,
                     const int& height);
@@ -40,6 +43,7 @@ class Renderer {
  private:
   SDL_Window* window_;
   SDL_Surface* surface_;
+  Model* model_;
 };
 }  // namespace swr
 

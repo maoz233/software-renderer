@@ -14,8 +14,11 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "SDL.h"
+#include "model.h"
+#include "utils.hpp"
 
 #pragma warning(disable : 4127)
 
@@ -42,9 +45,21 @@ void Renderer::Init() {
 void Renderer::Loop() {
   std::clog << "----- Renderer::Loop -----" << std::endl;
 
-  DrawLine(80, 60, 560, 420, SDL_MapRGB(this->surface_->format, 255, 255, 255));
-  DrawLine(80, 100, 600, 100, SDL_MapRGB(this->surface_->format, 255, 0, 0));
-  DrawLine(560, 420, 80, 60, SDL_MapRGB(this->surface_->format, 255, 0, 0));
+  for (int i = 0; i < this->model_->GetFacesCount(); ++i) {
+    std::vector<int> face = this->model_->GetFace(i);
+
+    for (int j = 0; j < 3; ++j) {
+      Vec3f v0 = this->model_->GetVertex(face[j]);
+      Vec3f v1 = this->model_->GetVertex(face[(j + 1) % 3]);
+      int x0 = static_cast<int>((v0.x + 1) * WIDTH / 2.);
+      int y0 = static_cast<int>((v0.y + 1) * HEIGHT / 2.);
+      int x1 = static_cast<int>((v1.x + 1) * WIDTH / 2.);
+      int y1 = static_cast<int>((v1.y + 1) * HEIGHT / 2.);
+
+      DrawLine(x0, y0, x1, y1,
+               SDL_MapRGB(this->surface_->format, 255, 255, 255));
+    }
+  }
 
   SDL_UpdateWindowSurface(this->window_);
 
@@ -56,8 +71,17 @@ void Renderer::Loop() {
 void Renderer::Terminate() {
   std::clog << "----- Renderer::Terminate -----" << std::endl;
 
+  if (this->model_) {
+    delete this->model_;
+  }
   SDL_DestroyWindow(this->window_);
   SDL_Quit();
+}
+
+void Renderer::LoadModel(const std::string& filename) {
+  std::clog << "----- Renderer::LoadModel -----" << std::endl;
+
+  this->model_ = new Model(filename);
 }
 
 void Renderer::CreateWindow(const std::string& title, const int& width,
