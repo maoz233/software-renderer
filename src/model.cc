@@ -47,8 +47,6 @@ Model::Model(const std::string& filename) : vertices_(), faces_() {
       in_string_stream >> trash;
 
       int i_trash, index;
-      in_string_stream >> i_trash;
-
       // face
       std::vector<int> face;
       while (in_string_stream >> index >> trash >> i_trash >> trash >>
