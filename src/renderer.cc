@@ -145,6 +145,13 @@ void Renderer::DrawLine(int x0, int y0, int x1, int y1, Uint32 pixel) {
 }
 
 void Renderer::SetPixel(int x, int y, Uint32 pixel) {
+  // flip surface vertically
+  y = HEIGHT - y;
+  // avoid coordinate beyond surface
+  if (x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT) {
+    return;
+  }
+
   int bpp = this->surface_->format->BytesPerPixel;
   /* Here p is the address to the pixel we want to set */
   Uint8* p =
