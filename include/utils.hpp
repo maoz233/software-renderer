@@ -93,6 +93,11 @@ struct Vec3 {
   // Dot product
   inline T operator*(const Vec3<T>& v) const;
 
+  // Norm
+  inline float Norm();
+  // Normalize
+  inline Vec3<T>& Normalize(T l = 1);
+
   template <typename>
   friend std::ostream& operator<<(std::ostream& out, Vec3<T>& v);
 };
@@ -126,6 +131,18 @@ Vec3<T> Vec3<T>::operator*(float f) const {
 template <typename T>
 T Vec3<T>::operator*(const Vec3<T>& v) const {
   return x * v.x + y * v.y + z * v.z;
+}
+
+template <typename T>
+float Vec3<T>::Norm() {
+  return std::sqrt(x * x + y * y + z * z);
+}
+
+template <typename T>
+Vec3<T>& Vec3<T>::Normalize(T l) {
+  *this = *this * (l / Norm());
+
+  return *this;
 }
 
 template <typename T>
