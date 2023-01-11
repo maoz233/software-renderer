@@ -14,6 +14,7 @@
 
 #include "SDL.h"
 #include "model.h"
+#include "utils.hpp"
 
 namespace swr {
 const int WIDTH = 800;
@@ -35,10 +36,13 @@ class Renderer {
                     const int& height);
   void CreateSurface();
 
+  void DrawTriangle(Vec2i& v0, Vec2i& v1, Vec2i& v2, Uint32 pixel);
   // Bresenham's line algorithm
   void DrawLine(int x0, int y0, int x1, int y1, Uint32 pixel);
 
   void SetPixel(int x, int y, Uint32 pixel);
+
+  static bool InsideTriangle(int x, int y, Vec2i& v0, Vec2i& v1, Vec2i& v2);
 
  private:
   SDL_Window* window_;
