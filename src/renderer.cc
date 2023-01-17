@@ -199,8 +199,8 @@ void Renderer::DrawTriangle(Vec3f& v0, Vec3f& v1, Vec3f& v2,
       }
 
       // Interpolate z index
-      int z = static_cast<int>(
-          std::round((v0.z * bc.x + v1.z * bc.y + v2.z * bc.z) / 3.f));
+      int z =
+          static_cast<int>(std::round(v0.z * bc.x + v1.z * bc.y + v2.z * bc.z));
       if ((*(this->zbuffer_))[x + y * WIDTH] < z) {
         (*(this->zbuffer_))[x + y * WIDTH] = z;
         SDL_PixelFormat* format = this->surface_->format;
@@ -210,21 +210,21 @@ void Renderer::DrawTriangle(Vec3f& v0, Vec3f& v1, Vec3f& v2,
             ((pixels[1] & format->Rmask) >> format->Rshift) << format->Rloss);
         Uint8 R2 = static_cast<Uint8>(
             ((pixels[2] & format->Rmask) >> format->Rshift) << format->Rloss);
-        Uint8 R = static_cast<Uint8>((R0 * bc.x + R1 * bc.y + R2 * bc.z) / 3.f);
+        Uint8 R = static_cast<Uint8>(R0 * bc.x + R1 * bc.y + R2 * bc.z);
         Uint8 G0 = static_cast<Uint8>(
             ((pixels[0] & format->Gmask) >> format->Gshift) << format->Gloss);
         Uint8 G1 = static_cast<Uint8>(
             ((pixels[1] & format->Gmask) >> format->Gshift) << format->Gloss);
         Uint8 G2 = static_cast<Uint8>(
             ((pixels[2] & format->Gmask) >> format->Gshift) << format->Gloss);
-        Uint8 G = static_cast<Uint8>((G0 * bc.x + G1 * bc.y + G2 * bc.z) / 3.f);
+        Uint8 G = static_cast<Uint8>(G0 * bc.x + G1 * bc.y + G2 * bc.z);
         Uint8 B0 = static_cast<Uint8>(
             ((pixels[0] & format->Bmask) >> format->Bshift) << format->Bloss);
         Uint8 B1 = static_cast<Uint8>(
             ((pixels[1] & format->Bmask) >> format->Bshift) << format->Bloss);
         Uint8 B2 = static_cast<Uint8>(
             ((pixels[2] & format->Bmask) >> format->Bshift) << format->Bloss);
-        Uint8 B = static_cast<Uint8>((B0 * bc.x + B1 * bc.y + B2 * bc.z) / 3.f);
+        Uint8 B = static_cast<Uint8>(B0 * bc.x + B1 * bc.y + B2 * bc.z);
 
         Uint32 pixel = SDL_MapRGB(format, R, G, B);
         SetPixel(this->surface_, x, y, pixel);
