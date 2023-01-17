@@ -39,6 +39,8 @@ void Renderer::Init() {
 
   CreateWindow(TITLE, WIDTH, HEIGHT);
   CreateSurface();
+  // Initialize zbuffer
+  this->zbuffer_ = new std::vector<int>(HEIGHT * WIDTH, INT_MIN);
 }
 
 void Renderer::Loop() {
@@ -63,13 +65,13 @@ void Renderer::Loop() {
     // }
 
     // Draw with triangle
-    Vec2i screen_coords[3];
+    Vec3f screen_coords[3];
     Vec3f world_coords[3];
     for (int j = 0; j < 3; ++j) {
       Vec3f vertex = this->model_->GetVertex(face[j]);
       screen_coords[j] =
-          Vec2i(static_cast<int>((vertex.x + 1.f) * WIDTH / 2.f),
-                static_cast<int>((vertex.y + 1.f) * HEIGHT / 2.f));
+          Vec3f((vertex.x + 1.f) * WIDTH / 2.f, (vertex.y + 1.f) * HEIGHT / 2.f,
+                vertex.z * INT_MAX);
       world_coords[j] = vertex;
     }
 
@@ -80,9 +82,9 @@ void Renderer::Loop() {
     if (intensity > 0) {
       DrawTriangle(screen_coords[0], screen_coords[1], screen_coords[2],
                    SDL_MapRGB(this->surface_->format,
-                              static_cast<Uint8>(255 * intensity),
-                              static_cast<Uint8>(255 * intensity),
-                              static_cast<Uint8>(255 * intensity)));
+                              static_cast<Uint8>(200 * intensity),
+                              static_cast<Uint8>(200 * intensity),
+                              static_cast<Uint8>(200 * intensity)));
     }
   }
 
@@ -96,6 +98,9 @@ void Renderer::Loop() {
 void Renderer::Terminate() {
   std::clog << "----- Renderer::Terminate -----" << std::endl;
 
+  if (this->zbuffer_) {
+    delete this->zbuffer_;
+  }
   if (this->model_) {
     delete this->model_;
   }
@@ -132,17 +137,26 @@ void Renderer::CreateSurface() {
   }
 }
 
-void Renderer::DrawTriangle(Vec2i& v0, Vec2i& v1, Vec2i& v2, Uint32 pixel) {
+void Renderer::DrawTriangle(Vec3f& v0, Vec3f& v1, Vec3f& v2, Uint32 pixel) {
   // Bounding Box
-  int x_min = std::min(std::min(v0.x, v1.x), v2.x);
-  int y_min = std::min(std::min(v0.y, v1.y), v2.y);
-  int x_max = std::max(std::max(v0.x, v1.x), v2.x);
-  int y_max = std::max(std::max(v0.y, v1.y), v2.y);
+  float x_min = std::round(std::min(std::min(v0.x, v1.x), v2.x));
+  float y_min = std::round(std::min(std::min(v0.y, v1.y), v2.y));
+  float x_max = std::round(std::max(std::max(v0.x, v1.x), v2.x));
+  float y_max = std::round(std::max(std::max(v0.y, v1.y), v2.y));
 
-  for (int x = x_min; x <= x_max; ++x) {
-    for (int y = y_min; y <= y_max; ++y) {
-      if (InsideTriangle(x, y, v0, v1, v2)) {
-        SetPixel(x, y, pixel);
+  for (auto x = x_min; x <= x_max; ++x) {
+    for (auto y = y_min; y <= y_max; ++y) {
+      Vec3f bc = Barycentric(x, y, v0, v1, v2);
+      if (bc.x < 1e-10 || bc.y < 1e-10 || bc.z < 1e-10) {
+        continue;
+      }
+
+      int z = static_cast<int>(
+          std::round((v0.z * bc.x + v1.z * bc.y + v2.z * bc.z) / 3.f));
+      if ((*(this->zbuffer_))[static_cast<int>(x + y * WIDTH)] < z) {
+        (*(this->zbuffer_))[static_cast<int>(x + y * WIDTH)] = z;
+        SetPixel(static_cast<int>(std::round(x)),
+                 static_cast<int>(std::round(y)), pixel);
       }
     }
   }
@@ -241,5 +255,12 @@ bool Renderer::InsideTriangle(int x, int y, Vec2i& v0, Vec2i& v1, Vec2i& v2) {
   }
 
   return ((z0.z > 0) == (z1.z > 0)) && ((z0.z > 0) == (z2.z > 0));
+}
+
+Vec3f Renderer::Barycentric(float x, float y, Vec3f& v0, Vec3f& v1, Vec3f& v2) {
+  Vec3f u = Vec3f(v2.x - v0.x, v1.x - v0.x, v0.x - x) ^
+            Vec3f(v2.y - v0.y, v1.y - v0.y, v0.y - y);
+
+  return Vec3f(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
 }
 }  // namespace swr

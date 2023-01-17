@@ -11,6 +11,7 @@
 #ifndef SOFTWARE_RENDERER_INCLUDE_RENDERER_H_
 #define SOFTWARE_RENDERER_INCLUDE_RENDERER_H_
 #include <string>
+#include <vector>
 
 #include "SDL.h"
 #include "model.h"
@@ -36,18 +37,21 @@ class Renderer {
                     const int& height);
   void CreateSurface();
 
-  void DrawTriangle(Vec2i& v0, Vec2i& v1, Vec2i& v2, Uint32 pixel);
+  void DrawTriangle(Vec3f& v0, Vec3f& v1, Vec3f& v2, Uint32 pixel);
   // Bresenham's line algorithm
   void DrawLine(int x0, int y0, int x1, int y1, Uint32 pixel);
 
   void SetPixel(int x, int y, Uint32 pixel);
 
   static bool InsideTriangle(int x, int y, Vec2i& v0, Vec2i& v1, Vec2i& v2);
+  // Barycentric Coordinates
+  static Vec3f Barycentric(float x, float y, Vec3f& v0, Vec3f& v1, Vec3f& v2);
 
  private:
   SDL_Window* window_;
   SDL_Surface* surface_;
   Model* model_;
+  std::vector<int>* zbuffer_;
 };
 }  // namespace swr
 
