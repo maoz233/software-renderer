@@ -46,17 +46,32 @@ Model::Model(const std::string& filename) : vertices_(), faces_() {
     } else if (!line.compare(0, 2, "f ")) {
       in_string_stream >> trash;
 
-      int i_trash, index;
+      int i_trash, vertex_index, texture_index;
       // face
-      std::vector<int> face;
-      while (in_string_stream >> index >> trash >> i_trash >> trash >>
-             i_trash) {
+      std::vector<int> face{};
+      std::vector<int> texture_indices{};
+      while (in_string_stream >> vertex_index >> trash >> texture_index >>
+             trash >> i_trash) {
         // wavefront obj: all indices start at 1, not 0
-        --index;
-        face.push_back(index);
+        --vertex_index;
+        face.push_back(vertex_index);
+        --texture_index;
+        texture_indices.push_back(texture_index);
       }
 
       this->faces_.push_back(face);
+      this->texture_indices_.push_back(texture_indices);
+    } else if (!line.compare(0, 3, "vt ")) {
+      in_string_stream >> trash >> trash;
+
+      // texture coordinates
+      Vec2f texture_coords{};
+      for (int i = 0; i < 2; ++i) {
+        in_string_stream >> texture_coords.raw[i];
+      }
+
+      this->texture_coords_.push_back(texture_coords);
+      in_string_stream >> trash;
     }
   }
 
@@ -77,4 +92,12 @@ int Model::GetFacesCount() const {
 Vec3f Model::GetVertex(int index) const { return this->vertices_[index]; }
 
 std::vector<int> Model::GetFace(int index) const { return this->faces_[index]; }
+
+std::vector<int> Model::GetTextureIndices(int index) const {
+  return this->texture_indices_[index];
+}
+
+Vec2f Model::GetTextureCoords(int index) const {
+  return this->texture_coords_[index];
+}
 }  // namespace swr

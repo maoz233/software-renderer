@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "SDL.h"
+#include "SDL_image.h"
 #include "model.h"
 #include "utils.hpp"
 #pragma warning(disable : 4127)
@@ -41,6 +42,8 @@ void Renderer::Init() {
   CreateSurface();
   // Initialize zbuffer
   this->zbuffer_ = new std::vector<int>(HEIGHT * WIDTH, INT_MIN);
+  LoadModel();
+  LoadDiffuseTexture();
 }
 
 void Renderer::Loop() {
@@ -50,6 +53,7 @@ void Renderer::Loop() {
 
   for (int i = 0; i < this->model_->GetFacesCount(); ++i) {
     std::vector<int> face = this->model_->GetFace(i);
+    std::vector<int> texture_indices = this->model_->GetTextureIndices(i);
 
     // Draw with line
     // for (int j = 0; j < 3; ++j) {
@@ -67,24 +71,47 @@ void Renderer::Loop() {
     // Draw with triangle
     Vec3f screen_coords[3];
     Vec3f world_coords[3];
+    Vec2f texture_coords[3];
     for (int j = 0; j < 3; ++j) {
       Vec3f vertex = this->model_->GetVertex(face[j]);
       screen_coords[j] =
           Vec3f((vertex.x + 1.f) * WIDTH / 2.f, (vertex.y + 1.f) * HEIGHT / 2.f,
                 vertex.z * INT_MAX);
       world_coords[j] = vertex;
+
+      texture_coords[j] = this->model_->GetTextureCoords(texture_indices[j]);
     }
 
     Vec3f normal = (world_coords[2] - world_coords[0]) ^
                    (world_coords[1] - world_coords[0]);
     normal.Normalize();
+
     float intensity = normal * light_dir;
     if (intensity > 0) {
+      std::vector<Uint32> pixels(3);
+
+      for (int k = 0; k < 3; ++k) {
+        int x = static_cast<int>(
+            std::round(texture_coords[k].u * this->diffuse_texture_->w));
+        int y = static_cast<int>(
+            std::round(texture_coords[k].v * this->diffuse_texture_->h));
+
+        Uint32 pixel = GetPixel(this->diffuse_texture_, x, y);
+        SDL_PixelFormat* format = this->diffuse_texture_->format;
+        Uint8 R = static_cast<Uint8>(((pixel & format->Rmask) >> format->Rshift)
+                                     << format->Rloss);
+        Uint8 G = static_cast<Uint8>(((pixel & format->Gmask) >> format->Gshift)
+                                     << format->Gloss);
+        Uint8 B = static_cast<Uint8>(((pixel & format->Bmask) >> format->Bshift)
+                                     << format->Bloss);
+
+        pixels[k] = SDL_MapRGB(format, static_cast<Uint8>(intensity * R),
+                               static_cast<Uint8>(intensity * G),
+                               static_cast<Uint8>(intensity * B));
+      }
+
       DrawTriangle(screen_coords[0], screen_coords[1], screen_coords[2],
-                   SDL_MapRGB(this->surface_->format,
-                              static_cast<Uint8>(200 * intensity),
-                              static_cast<Uint8>(200 * intensity),
-                              static_cast<Uint8>(200 * intensity)));
+                   pixels);
     }
   }
 
@@ -112,6 +139,20 @@ void Renderer::LoadModel(const std::string& filename) {
   std::clog << "----- Renderer::LoadModel -----" << std::endl;
 
   this->model_ = new Model(filename);
+  if (!this->model_) {
+    throw std::runtime_error("----- Error::LOAD_MODEL_FAILURE -----");
+  }
+}
+
+void Renderer::LoadDiffuseTexture(const std::string& filename) {
+  std::clog << "----- Renderer::LoadTexture -----" << std::endl;
+
+  SDL_Surface* texture = IMG_Load(filename.c_str());
+  this->diffuse_texture_ =
+      SDL_ConvertSurface(texture, this->surface_->format, 0);
+  if (!this->diffuse_texture_) {
+    throw std::runtime_error("----- Error::LOAD_DIFFUSE_TEXTURE_FAILURE -----");
+  }
 }
 
 void Renderer::CreateWindow(const std::string& title, const int& width,
@@ -137,7 +178,8 @@ void Renderer::CreateSurface() {
   }
 }
 
-void Renderer::DrawTriangle(Vec3f& v0, Vec3f& v1, Vec3f& v2, Uint32 pixel) {
+void Renderer::DrawTriangle(Vec3f& v0, Vec3f& v1, Vec3f& v2,
+                            std::vector<Uint32>& pixels) {
   // Bounding Box
   int x_min =
       static_cast<int>(std::round(std::min(std::min(v0.x, v1.x), v2.x)));
@@ -161,7 +203,31 @@ void Renderer::DrawTriangle(Vec3f& v0, Vec3f& v1, Vec3f& v2, Uint32 pixel) {
           std::round((v0.z * bc.x + v1.z * bc.y + v2.z * bc.z) / 3.f));
       if ((*(this->zbuffer_))[x + y * WIDTH] < z) {
         (*(this->zbuffer_))[x + y * WIDTH] = z;
-        SetPixel(x, y, pixel);
+        SDL_PixelFormat* format = this->surface_->format;
+        Uint8 R0 = static_cast<Uint8>(
+            ((pixels[0] & format->Rmask) >> format->Rshift) << format->Rloss);
+        Uint8 R1 = static_cast<Uint8>(
+            ((pixels[1] & format->Rmask) >> format->Rshift) << format->Rloss);
+        Uint8 R2 = static_cast<Uint8>(
+            ((pixels[2] & format->Rmask) >> format->Rshift) << format->Rloss);
+        Uint8 R = static_cast<Uint8>((R0 * bc.x + R1 * bc.y + R2 * bc.z) / 3.f);
+        Uint8 G0 = static_cast<Uint8>(
+            ((pixels[0] & format->Gmask) >> format->Gshift) << format->Gloss);
+        Uint8 G1 = static_cast<Uint8>(
+            ((pixels[1] & format->Gmask) >> format->Gshift) << format->Gloss);
+        Uint8 G2 = static_cast<Uint8>(
+            ((pixels[2] & format->Gmask) >> format->Gshift) << format->Gloss);
+        Uint8 G = static_cast<Uint8>((G0 * bc.x + G1 * bc.y + G2 * bc.z) / 3.f);
+        Uint8 B0 = static_cast<Uint8>(
+            ((pixels[0] & format->Bmask) >> format->Bshift) << format->Bloss);
+        Uint8 B1 = static_cast<Uint8>(
+            ((pixels[1] & format->Bmask) >> format->Bshift) << format->Bloss);
+        Uint8 B2 = static_cast<Uint8>(
+            ((pixels[2] & format->Bmask) >> format->Bshift) << format->Bloss);
+        Uint8 B = static_cast<Uint8>((B0 * bc.x + B1 * bc.y + B2 * bc.z) / 3.f);
+
+        Uint32 pixel = SDL_MapRGB(format, R, G, B);
+        SetPixel(this->surface_, x, y, pixel);
       }
     }
   }
@@ -191,9 +257,9 @@ void Renderer::DrawLine(int x0, int y0, int x1, int y1, Uint32 pixel) {
 
   for (int x = x0; x <= x1; ++x) {
     if (steep) {
-      SetPixel(y, x, pixel);
+      SetPixel(this->surface_, y, x, pixel);
     } else {
-      SetPixel(x, y, pixel);
+      SetPixel(this->surface_, x, y, pixel);
     }
 
     err_2 += d_err_2;
@@ -204,7 +270,7 @@ void Renderer::DrawLine(int x0, int y0, int x1, int y1, Uint32 pixel) {
   }
 }
 
-void Renderer::SetPixel(int x, int y, Uint32 pixel) {
+void Renderer::SetPixel(SDL_Surface* surface, int x, int y, Uint32 pixel) {
   // flip surface vertically
   y = HEIGHT - y;
   // avoid coordinate beyond surface
@@ -212,10 +278,9 @@ void Renderer::SetPixel(int x, int y, Uint32 pixel) {
     return;
   }
 
-  int bpp = this->surface_->format->BytesPerPixel;
+  int bpp = surface->format->BytesPerPixel;
   /* Here p is the address to the pixel we want to set */
-  Uint8* p =
-      (Uint8*)this->surface_->pixels + y * this->surface_->pitch + x * bpp;
+  Uint8* p = (Uint8*)surface->pixels + y * surface->pitch + x * bpp;
 
   switch (bpp) {
     case 1:
@@ -241,6 +306,39 @@ void Renderer::SetPixel(int x, int y, Uint32 pixel) {
     case 4:
       *(Uint32*)p = pixel;
       break;
+  }
+}
+
+Uint32 Renderer::GetPixel(SDL_Surface* surface, int x, int y) {
+  // flip surface vertically
+  y = surface->h - y;
+  // avoid coordinate beyond surface
+  if (x < 0 || y < 0 || x >= surface->w || y >= surface->h) {
+    return SDL_MapRGB(surface->format, 255, 255, 255);
+  }
+
+  int bpp = surface->format->BytesPerPixel;
+  /* Here p is the address to the pixel we want to retrieve */
+  Uint8* p = (Uint8*)surface->pixels + y * surface->pitch + x * bpp;
+
+  switch (bpp) {
+    case 1:
+      return *p;
+
+    case 2:
+      return *(Uint16*)p;
+
+    case 3:
+      if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+        return p[0] << 16 | p[1] << 8 | p[2];
+      else
+        return p[0] | p[1] << 8 | p[2] << 16;
+
+    case 4:
+      return *(Uint32*)p;
+
+    default:
+      return 0; /* shouldn't happen, but avoids warnings */
   }
 }
 

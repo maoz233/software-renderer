@@ -22,6 +22,8 @@ const int WIDTH = 800;
 const int HEIGHT = 600;
 const std::string TITLE("Software Renderer");
 const std::string MODEL_FILENAME("../../obj/african_head.obj");
+const std::string DIFFUSE_TEXTURE_FILENAME(
+    "../../obj/african_head_diffuse.tga");
 
 class Renderer {
  public:
@@ -31,17 +33,23 @@ class Renderer {
   void Init();
   void Loop();
   void Terminate();
+
   void LoadModel(const std::string& filename = MODEL_FILENAME);
+  void LoadDiffuseTexture(
+      const std::string& filename = DIFFUSE_TEXTURE_FILENAME);
 
   void CreateWindow(const std::string& title, const int& width,
                     const int& height);
   void CreateSurface();
 
-  void DrawTriangle(Vec3f& v0, Vec3f& v1, Vec3f& v2, Uint32 pixel);
+  void DrawTriangle(Vec3f& v0, Vec3f& v1, Vec3f& v2,
+                    std::vector<Uint32>& pixels);
   // Bresenham's line algorithm
   void DrawLine(int x0, int y0, int x1, int y1, Uint32 pixel);
 
-  void SetPixel(int x, int y, Uint32 pixel);
+  void SetPixel(SDL_Surface* surface, int x, int y, Uint32 pixel);
+
+  Uint32 GetPixel(SDL_Surface* surface, int x, int y);
 
   static bool InsideTriangle(int x, int y, Vec2i& v0, Vec2i& v1, Vec2i& v2);
   // Barycentric Coordinates
@@ -52,6 +60,7 @@ class Renderer {
   SDL_Surface* surface_;
   Model* model_;
   std::vector<int>* zbuffer_;
+  SDL_Surface* diffuse_texture_;
 };
 }  // namespace swr
 

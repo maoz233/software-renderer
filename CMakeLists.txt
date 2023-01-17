@@ -24,3 +24,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include)
 # SDL2
 find_package(SDL2 CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main)
+
+# SDL_image
+find_package(sdl2-image CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2_image)
