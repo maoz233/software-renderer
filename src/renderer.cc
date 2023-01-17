@@ -139,24 +139,29 @@ void Renderer::CreateSurface() {
 
 void Renderer::DrawTriangle(Vec3f& v0, Vec3f& v1, Vec3f& v2, Uint32 pixel) {
   // Bounding Box
-  float x_min = std::round(std::min(std::min(v0.x, v1.x), v2.x));
-  float y_min = std::round(std::min(std::min(v0.y, v1.y), v2.y));
-  float x_max = std::round(std::max(std::max(v0.x, v1.x), v2.x));
-  float y_max = std::round(std::max(std::max(v0.y, v1.y), v2.y));
+  int x_min =
+      static_cast<int>(std::round(std::min(std::min(v0.x, v1.x), v2.x)));
+  int y_min =
+      static_cast<int>(std::round(std::min(std::min(v0.y, v1.y), v2.y)));
+  int x_max =
+      static_cast<int>(std::round(std::max(std::max(v0.x, v1.x), v2.x)));
+  int y_max =
+      static_cast<int>(std::round(std::max(std::max(v0.y, v1.y), v2.y)));
 
-  for (auto x = x_min; x <= x_max; ++x) {
-    for (auto y = y_min; y <= y_max; ++y) {
-      Vec3f bc = Barycentric(x, y, v0, v1, v2);
-      if (bc.x < 1e-10 || bc.y < 1e-10 || bc.z < 1e-10) {
+  for (int x = x_min; x <= x_max; ++x) {
+    for (int y = y_min; y <= y_max; ++y) {
+      Vec3f bc =
+          Barycentric(static_cast<float>(x), static_cast<float>(y), v0, v1, v2);
+      if (bc.x < 1e-5 || bc.y < 1e-5 || bc.z < 1e-5) {
         continue;
       }
 
+      // Interpolate z index
       int z = static_cast<int>(
           std::round((v0.z * bc.x + v1.z * bc.y + v2.z * bc.z) / 3.f));
-      if ((*(this->zbuffer_))[static_cast<int>(x + y * WIDTH)] < z) {
-        (*(this->zbuffer_))[static_cast<int>(x + y * WIDTH)] = z;
-        SetPixel(static_cast<int>(std::round(x)),
-                 static_cast<int>(std::round(y)), pixel);
+      if ((*(this->zbuffer_))[x + y * WIDTH] < z) {
+        (*(this->zbuffer_))[x + y * WIDTH] = z;
+        SetPixel(x, y, pixel);
       }
     }
   }
