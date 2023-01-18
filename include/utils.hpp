@@ -11,8 +11,15 @@
 #ifndef SOFTWARE_RENDERER_INCLUDE_UTILS_H_
 #define SOFTWARE_RENDERER_INCLUDE_UTILS_H_
 
+#if _WIN32
 #pragma warning(disable : 4201)
+#endif
+#if __APPLE__
+#pragma clang diagnostic ignored "-Wgnu-anonymous-struct"
+#pragma clang diagnostic ignored "-Wnested-anon-types"
+#endif
 
+#include <cmath>
 #include <iostream>
 
 namespace swr {

@@ -21,9 +21,15 @@ namespace swr {
 const int WIDTH = 800;
 const int HEIGHT = 600;
 const std::string TITLE("Software Renderer");
+#if _WIN32
 const std::string MODEL_FILENAME("../../obj/african_head.obj");
 const std::string DIFFUSE_TEXTURE_FILENAME(
     "../../obj/african_head_diffuse.tga");
+#endif
+#if __APPLE__
+const std::string MODEL_FILENAME("../obj/african_head.obj");
+const std::string DIFFUSE_TEXTURE_FILENAME("../obj/african_head_diffuse.tga");
+#endif
 
 class Renderer {
  public:

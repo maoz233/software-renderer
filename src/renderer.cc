@@ -11,6 +11,7 @@
 #include "renderer.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -20,7 +21,10 @@
 #include "SDL_image.h"
 #include "model.h"
 #include "utils.hpp"
+
+#if _WIN32
 #pragma warning(disable : 4127)
+#endif
 
 namespace swr {
 Renderer::Renderer() {
