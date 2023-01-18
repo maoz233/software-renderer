@@ -69,9 +69,9 @@ void Renderer::Loop() {
     // }
 
     // Draw with triangle
-    Vec3f screen_coords[3];
-    Vec3f world_coords[3];
-    Vec2f texture_coords[3];
+    std::vector<Vec3f> screen_coords(3);
+    std::vector<Vec3f> world_coords(3);
+    std::vector<Vec2f> texture_coords(3);
     for (int j = 0; j < 3; ++j) {
       Vec3f vertex = this->model_->GetVertex(face[j]);
       screen_coords[j] =
@@ -88,30 +88,7 @@ void Renderer::Loop() {
 
     float intensity = normal * light_dir;
     if (intensity > 0) {
-      std::vector<Uint32> pixels(3);
-
-      for (int k = 0; k < 3; ++k) {
-        int x = static_cast<int>(
-            std::round(texture_coords[k].u * this->diffuse_texture_->w));
-        int y = static_cast<int>(
-            std::round(texture_coords[k].v * this->diffuse_texture_->h));
-
-        Uint32 pixel = GetPixel(this->diffuse_texture_, x, y);
-        SDL_PixelFormat* format = this->diffuse_texture_->format;
-        Uint8 R = static_cast<Uint8>(((pixel & format->Rmask) >> format->Rshift)
-                                     << format->Rloss);
-        Uint8 G = static_cast<Uint8>(((pixel & format->Gmask) >> format->Gshift)
-                                     << format->Gloss);
-        Uint8 B = static_cast<Uint8>(((pixel & format->Bmask) >> format->Bshift)
-                                     << format->Bloss);
-
-        pixels[k] = SDL_MapRGB(format, static_cast<Uint8>(intensity * R),
-                               static_cast<Uint8>(intensity * G),
-                               static_cast<Uint8>(intensity * B));
-      }
-
-      DrawTriangle(screen_coords[0], screen_coords[1], screen_coords[2],
-                   pixels);
+      DrawTriangle(screen_coords, texture_coords, intensity);
     }
   }
 
@@ -178,56 +155,59 @@ void Renderer::CreateSurface() {
   }
 }
 
-void Renderer::DrawTriangle(Vec3f& v0, Vec3f& v1, Vec3f& v2,
-                            std::vector<Uint32>& pixels) {
+void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
+                            std::vector<Vec2f>& texture_coords,
+                            float intensity) {
   // Bounding Box
-  int x_min =
-      static_cast<int>(std::round(std::min(std::min(v0.x, v1.x), v2.x)));
-  int y_min =
-      static_cast<int>(std::round(std::min(std::min(v0.y, v1.y), v2.y)));
-  int x_max =
-      static_cast<int>(std::round(std::max(std::max(v0.x, v1.x), v2.x)));
-  int y_max =
-      static_cast<int>(std::round(std::max(std::max(v0.y, v1.y), v2.y)));
+  int x_min = static_cast<int>(std::round(std::min(
+      std::min(screen_coords[0].x, screen_coords[1].x), screen_coords[2].x)));
+  int y_min = static_cast<int>(std::round(std::min(
+      std::min(screen_coords[0].y, screen_coords[1].y), screen_coords[2].y)));
+  int x_max = static_cast<int>(std::round(std::max(
+      std::max(screen_coords[0].x, screen_coords[1].x), screen_coords[2].x)));
+  int y_max = static_cast<int>(std::round(std::max(
+      std::max(screen_coords[0].y, screen_coords[1].y), screen_coords[2].y)));
 
   for (int x = x_min; x <= x_max; ++x) {
     for (int y = y_min; y <= y_max; ++y) {
       Vec3f bc =
-          Barycentric(static_cast<float>(x), static_cast<float>(y), v0, v1, v2);
+          Barycentric(static_cast<float>(x), static_cast<float>(y),
+                      screen_coords[0], screen_coords[1], screen_coords[2]);
       if (bc.x < 1e-5 || bc.y < 1e-5 || bc.z < 1e-5) {
         continue;
       }
 
       // Interpolate z index
-      int z =
-          static_cast<int>(std::round(v0.z * bc.x + v1.z * bc.y + v2.z * bc.z));
+      int z = static_cast<int>(std::round(screen_coords[0].z * bc.x +
+                                          screen_coords[1].z * bc.y +
+                                          screen_coords[2].z * bc.z));
       if ((*(this->zbuffer_))[x + y * WIDTH] < z) {
+        // Update z index
         (*(this->zbuffer_))[x + y * WIDTH] = z;
-        SDL_PixelFormat* format = this->surface_->format;
-        Uint8 R0 = static_cast<Uint8>(
-            ((pixels[0] & format->Rmask) >> format->Rshift) << format->Rloss);
-        Uint8 R1 = static_cast<Uint8>(
-            ((pixels[1] & format->Rmask) >> format->Rshift) << format->Rloss);
-        Uint8 R2 = static_cast<Uint8>(
-            ((pixels[2] & format->Rmask) >> format->Rshift) << format->Rloss);
-        Uint8 R = static_cast<Uint8>(R0 * bc.x + R1 * bc.y + R2 * bc.z);
-        Uint8 G0 = static_cast<Uint8>(
-            ((pixels[0] & format->Gmask) >> format->Gshift) << format->Gloss);
-        Uint8 G1 = static_cast<Uint8>(
-            ((pixels[1] & format->Gmask) >> format->Gshift) << format->Gloss);
-        Uint8 G2 = static_cast<Uint8>(
-            ((pixels[2] & format->Gmask) >> format->Gshift) << format->Gloss);
-        Uint8 G = static_cast<Uint8>(G0 * bc.x + G1 * bc.y + G2 * bc.z);
-        Uint8 B0 = static_cast<Uint8>(
-            ((pixels[0] & format->Bmask) >> format->Bshift) << format->Bloss);
-        Uint8 B1 = static_cast<Uint8>(
-            ((pixels[1] & format->Bmask) >> format->Bshift) << format->Bloss);
-        Uint8 B2 = static_cast<Uint8>(
-            ((pixels[2] & format->Bmask) >> format->Bshift) << format->Bloss);
-        Uint8 B = static_cast<Uint8>(B0 * bc.x + B1 * bc.y + B2 * bc.z);
 
-        Uint32 pixel = SDL_MapRGB(format, R, G, B);
-        SetPixel(this->surface_, x, y, pixel);
+        // Interpolate texture coordinates
+        int u = static_cast<int>(std::round((texture_coords[0].u * bc.x +
+                                             texture_coords[1].u * bc.y +
+                                             texture_coords[2].u * bc.z) *
+                                            this->diffuse_texture_->w));
+        int v = static_cast<int>(std::round((texture_coords[0].v * bc.x +
+                                             texture_coords[1].v * bc.y +
+                                             texture_coords[2].v * bc.z) *
+                                            this->diffuse_texture_->h));
+
+        Uint32 pixel = GetPixel(this->diffuse_texture_, u, v);
+        SDL_PixelFormat* format = this->diffuse_texture_->format;
+        Uint8 R = static_cast<Uint8>(
+            (((pixel & format->Rmask) >> format->Rshift) << format->Rloss) *
+            intensity);
+        Uint8 G = static_cast<Uint8>(
+            (((pixel & format->Gmask) >> format->Gshift) << format->Gloss) *
+            intensity);
+        Uint8 B = static_cast<Uint8>(
+            (((pixel & format->Bmask) >> format->Bshift) << format->Bloss) *
+            intensity);
+
+        SetPixel(this->surface_, x, y, SDL_MapRGB(format, R, G, B));
       }
     }
   }
