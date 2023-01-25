@@ -16,7 +16,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "utils.hpp"
+#include "utils.h"
 
 namespace swr {
 Model::Model(const std::string& filename) : vertices_(), faces_() {

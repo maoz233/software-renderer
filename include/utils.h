@@ -22,8 +22,11 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include <vector>
 
 namespace swr {
+const float PI = 3.14159f;
+
 template <typename T>
 struct Vec2 {
   union {
@@ -186,7 +189,7 @@ struct Mat {
 
   Mat<M, N>();
 
-  std::vector<float>& operator[](int index) const;
+  std::vector<float>& operator[](int index);
   template <int O>
   Mat<M, N>& operator*(Mat<N, O>& mat) const;
 
@@ -206,7 +209,7 @@ Mat<M, N>::Mat()
       m(std::vector<std::vector<float> >(M, std::vector<float>(N, 0.f))) {}
 
 template <int M, int N>
-std::vector<float>& Mat<M, N>::operator[](int index) const {
+std::vector<float>& Mat<M, N>::operator[](int index) {
   assert(index >= 0 && index < M);
 
   return this->m[index];
@@ -232,7 +235,7 @@ template <int M, int N>
 std::ostream& operator<<(std::ostream& out, Mat<M, N>& mat) {
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
-      out << this->m[i][j] << ", ";
+      out << mat.m[i][j] << ", ";
     }
     out << std::endl;
   }
@@ -328,6 +331,9 @@ Mat<M, N> Mat<M, N>::Identity() {
 typedef Mat<4, 4> Mat4;
 typedef Mat<1, 4> Vec4;
 
+Mat4& LookAt(Vec3f& origin, Vec3f& target);
+
+Mat4& Project(float near, float far, float theta);
 }  // namespace swr
 
 #endif  // SOFTWARE_RENDERER_INCLUDE_UTILS_H_

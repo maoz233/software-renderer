@@ -15,7 +15,7 @@
 
 #include "SDL.h"
 #include "model.h"
-#include "utils.hpp"
+#include "utils.h"
 
 namespace swr {
 const int WIDTH = 800;

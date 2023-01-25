@@ -20,7 +20,7 @@
 #include "SDL.h"
 #include "SDL_image.h"
 #include "model.h"
-#include "utils.hpp"
+#include "utils.h"
 
 #if _WIN32
 #pragma warning(disable : 4127)

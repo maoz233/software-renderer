@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-#include "utils.hpp"
+#include "utils.h"
 
 namespace swr {
 class Model {
