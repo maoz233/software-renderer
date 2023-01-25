@@ -204,9 +204,9 @@ struct Mat {
 
 template <int M, int N>
 Mat<M, N>::Mat()
-    : rows(M),
-      cols(N),
-      m(std::vector<std::vector<float> >(M, std::vector<float>(N, 0.f))) {}
+    : m(std::vector<std::vector<float> >(M, std::vector<float>(N, 0.f))),
+      rows(M),
+      cols(N) {}
 
 template <int M, int N>
 std::vector<float>& Mat<M, N>::operator[](int index) {
@@ -264,7 +264,7 @@ Mat<M, N>& Mat<M, N>::Inverse() const {
 
   // Copy original matrix
   for (int i = 0; i < M; ++i) {
-    for (int j = 0; j < N : ++j) {
+    for (int j = 0; j < N; ++j) {
       mat[i][j] = this->m[i][j];
     }
   }
