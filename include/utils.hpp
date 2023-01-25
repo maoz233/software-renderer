@@ -326,6 +326,7 @@ Mat<M, N> Mat<M, N>::Identity() {
 }
 
 typedef Mat<4, 4> Mat4;
+typedef Mat<1, 4> Vec4;
 
 }  // namespace swr
 
