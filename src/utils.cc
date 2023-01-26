@@ -98,6 +98,8 @@ Mat4 Viewport(float width, float height) {
   viewport[0][3] = width / 2.f;
   viewport[1][1] = height / 2.f;
   viewport[1][3] = height / 2.f;
+  viewport[2][2] = INT_MAX / 2.f;
+  viewport[2][3] = INT_MAX / 2.f;
 
   return viewport;
 };

@@ -55,13 +55,13 @@ void Renderer::Loop() {
 
   Vec3f light_dir(0.f, 0.f, -1.f);
 
-  Vec3f eye(1.0f, 1.0f, 3.f);
+  Vec3f eye(0.f, 0.f, 3.f);
   Vec3f center(0.0f, 0.0f, 0.f);
   Mat4 view = LookAt(eye, center);
 
   float near = -1.f;
   float far = -100.f;
-  float fov = 120.f;
+  float fov = 45.f;
   float aspect_ratio = static_cast<float>(WIDTH) / static_cast<float>(HEIGHT);
   Mat4 projection = PerspectiveProject(near, far, fov, aspect_ratio);
 
@@ -87,18 +87,19 @@ void Renderer::Loop() {
 
     // Draw with triangle
     std::vector<Vec3f> screen_coords(3);
-    std::vector<Vec3f> world_coords(3);
     std::vector<Vec3f> normal_coords(3);
     for (int j = 0; j < 3; ++j) {
       Vec3f vertex = this->model_->GetVertex(face[j]);
+
       Vec4 homo_vertex{};
       homo_vertex[0][0] = vertex.x;
       homo_vertex[1][0] = vertex.y;
       homo_vertex[2][0] = vertex.z;
       homo_vertex[3][0] = 1.f;
+
       Vec4 v = (viewport * projection * view) * homo_vertex;
-      screen_coords[j] = Vec3f(v[0][0], v[1][0], v[2][0]);
-      world_coords[j] = Vec3f(v[0][0], v[1][0], v[2][0]);
+      screen_coords[j] =
+          Vec3f(v[0][0] / v[3][0], v[1][0] / v[3][0], v[2][0] / v[3][0]);
 
       normal_coords[j] =
           this->model_->GetNormalCoords(normal_indices[j]).Normalize();
@@ -106,7 +107,7 @@ void Renderer::Loop() {
 
     std::vector<float> intensities(3);
     for (int j = 0; j < 3; ++j) {
-      intensities[j] = normal_coords[j] * light_dir;
+      intensities[j] = normal_coords[j].Normalize() * light_dir;
     }
 
     DrawTriangle(screen_coords, intensities);
@@ -214,13 +215,11 @@ void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
         float intensity = intensities[0] * bc.x + intensities[1] * bc.y +
                           intensities[2] * bc.z;
 
-        if (intensity > 0.f) {
-          SDL_PixelFormat* format = this->diffuse_texture_->format;
-          SetPixel(this->surface_, x, y,
-                   SDL_MapRGB(format, static_cast<Uint8>(200 * intensity),
-                              static_cast<Uint8>(200 * intensity),
-                              static_cast<Uint8>(200 * intensity)));
-        }
+        SDL_PixelFormat* format = this->diffuse_texture_->format;
+        SetPixel(this->surface_, x, y,
+                 SDL_MapRGB(format, static_cast<Uint8>(200 * intensity),
+                            static_cast<Uint8>(200 * intensity),
+                            static_cast<Uint8>(200 * intensity)));
       }
     }
   }
