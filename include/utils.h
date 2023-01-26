@@ -191,13 +191,13 @@ struct Mat {
 
   std::vector<float>& operator[](int index);
   template <int O>
-  Mat<M, N>& operator*(Mat<N, O>& mat) const;
+  Mat<M, O> operator*(Mat<N, O> mat) const;
 
   template <typename>
   friend std::ostream& operator<<(std::ostream& out, Mat<M, N>& mat);
 
-  Mat<M, N>& Transpose() const;
-  Mat<M, N>& Inverse() const;
+  Mat<M, N> Transpose() const;
+  Mat<M, N> Inverse() const;
 
   static Mat<M, N> Identity();
 };
@@ -217,18 +217,18 @@ std::vector<float>& Mat<M, N>::operator[](int index) {
 
 template <int M, int N>
 template <int O>
-Mat<M, N>& Mat<M, N>::operator*(Mat<N, O>& mat) const {
+Mat<M, O> Mat<M, N>::operator*(Mat<N, O> mat) const {
   Mat<M, O> product{};
 
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < O; ++j) {
       for (int k = 0; k < N; ++k) {
-        product[i][j] += this->m[i][k] * mat[k][i];
+        product[i][j] += this->m[i][k] * mat[k][j];
       }
     }
   }
 
-  return mat;
+  return product;
 }
 
 template <int M, int N>
@@ -244,7 +244,7 @@ std::ostream& operator<<(std::ostream& out, Mat<M, N>& mat) {
 }
 
 template <int M, int N>
-Mat<M, N>& Mat<M, N>::Transpose() const {
+Mat<M, N> Mat<M, N>::Transpose() const {
   Mat<N, M> mat{};
 
   for (int i = 0; i < M; ++i) {
@@ -257,7 +257,7 @@ Mat<M, N>& Mat<M, N>::Transpose() const {
 }
 
 template <int M, int N>
-Mat<M, N>& Mat<M, N>::Inverse() const {
+Mat<M, N> Mat<M, N>::Inverse() const {
   assert(M == N);
 
   Mat<M, N * 2> mat{};
@@ -329,11 +329,15 @@ Mat<M, N> Mat<M, N>::Identity() {
 }
 
 typedef Mat<4, 4> Mat4;
-typedef Mat<1, 4> Vec4;
+typedef Mat<4, 1> Vec4;
 
-Mat4& LookAt(Vec3f& origin, Vec3f& target);
+Mat4 LookAt(Vec3f& eye, Vec3f& center);
 
-Mat4& Project(float near, float far, float theta);
+Mat4 OthographicProject(float near, float far, float fov, float aspect_ratio);
+
+Mat4 PerspectiveProject(float near, float far, float fov, float aspect_ratio);
+
+Mat4 Viewport(float width, float height);
 }  // namespace swr
 
 #endif  // SOFTWARE_RENDERER_INCLUDE_UTILS_H_

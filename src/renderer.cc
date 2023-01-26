@@ -55,9 +55,22 @@ void Renderer::Loop() {
 
   Vec3f light_dir(0.f, 0.f, -1.f);
 
+  Vec3f eye(1.0f, 1.0f, 3.f);
+  Vec3f center(0.0f, 0.0f, 0.f);
+  Mat4 view = LookAt(eye, center);
+
+  float near = -1.f;
+  float far = -100.f;
+  float fov = 120.f;
+  float aspect_ratio = static_cast<float>(WIDTH) / static_cast<float>(HEIGHT);
+  Mat4 projection = PerspectiveProject(near, far, fov, aspect_ratio);
+
+  Mat4 viewport =
+      Viewport(static_cast<float>(WIDTH), static_cast<float>(HEIGHT));
+
   for (int i = 0; i < this->model_->GetFacesCount(); ++i) {
     std::vector<int> face = this->model_->GetFace(i);
-    std::vector<int> texture_indices = this->model_->GetTextureIndices(i);
+    std::vector<int> normal_indices = this->model_->GetNormalIndices(i);
 
     // Draw with line
     // for (int j = 0; j < 3; ++j) {
@@ -67,7 +80,7 @@ void Renderer::Loop() {
     //   int y0 = static_cast<int>((v0.y + 1) * HEIGHT / 2.);
     //   int x1 = static_cast<int>((v1.x + 1) * WIDTH / 2.);
     //   int y1 = static_cast<int>((v1.y + 1) * HEIGHT / 2.);
-
+    //
     //   DrawLine(x0, y0, x1, y1,
     //            SDL_MapRGB(this->surface_->format, 255, 255, 255));
     // }
@@ -75,25 +88,28 @@ void Renderer::Loop() {
     // Draw with triangle
     std::vector<Vec3f> screen_coords(3);
     std::vector<Vec3f> world_coords(3);
-    std::vector<Vec2f> texture_coords(3);
+    std::vector<Vec3f> normal_coords(3);
     for (int j = 0; j < 3; ++j) {
       Vec3f vertex = this->model_->GetVertex(face[j]);
-      screen_coords[j] =
-          Vec3f((vertex.x + 1.f) * WIDTH / 2.f, (vertex.y + 1.f) * HEIGHT / 2.f,
-                vertex.z * INT_MAX);
-      world_coords[j] = vertex;
+      Vec4 homo_vertex{};
+      homo_vertex[0][0] = vertex.x;
+      homo_vertex[1][0] = vertex.y;
+      homo_vertex[2][0] = vertex.z;
+      homo_vertex[3][0] = 1.f;
+      Vec4 v = (viewport * projection * view) * homo_vertex;
+      screen_coords[j] = Vec3f(v[0][0], v[1][0], v[2][0]);
+      world_coords[j] = Vec3f(v[0][0], v[1][0], v[2][0]);
 
-      texture_coords[j] = this->model_->GetTextureCoords(texture_indices[j]);
+      normal_coords[j] =
+          this->model_->GetNormalCoords(normal_indices[j]).Normalize();
     }
 
-    Vec3f normal = (world_coords[2] - world_coords[0]) ^
-                   (world_coords[1] - world_coords[0]);
-    normal.Normalize();
-
-    float intensity = normal * light_dir;
-    if (intensity > 0) {
-      DrawTriangle(screen_coords, texture_coords, intensity);
+    std::vector<float> intensities(3);
+    for (int j = 0; j < 3; ++j) {
+      intensities[j] = normal_coords[j] * light_dir;
     }
+
+    DrawTriangle(screen_coords, intensities);
   }
 
   SDL_UpdateWindowSurface(this->window_);
@@ -160,8 +176,7 @@ void Renderer::CreateSurface() {
 }
 
 void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
-                            std::vector<Vec2f>& texture_coords,
-                            float intensity) {
+                            std::vector<float> intensities) {
   // Bounding Box
   int x_min = static_cast<int>(std::round(std::min(
       std::min(screen_coords[0].x, screen_coords[1].x), screen_coords[2].x)));
@@ -174,6 +189,11 @@ void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
 
   for (int x = x_min; x <= x_max; ++x) {
     for (int y = y_min; y <= y_max; ++y) {
+      // avoid coordinate beyond surface
+      if (x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT) {
+        continue;
+      }
+
       Vec3f bc =
           Barycentric(static_cast<float>(x), static_cast<float>(y),
                       screen_coords[0], screen_coords[1], screen_coords[2]);
@@ -185,33 +205,22 @@ void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
       int z = static_cast<int>(std::round(screen_coords[0].z * bc.x +
                                           screen_coords[1].z * bc.y +
                                           screen_coords[2].z * bc.z));
+
       if ((*(this->zbuffer_))[x + y * WIDTH] < z) {
         // Update z index
         (*(this->zbuffer_))[x + y * WIDTH] = z;
 
-        // Interpolate texture coordinates
-        int u = static_cast<int>(std::round((texture_coords[0].u * bc.x +
-                                             texture_coords[1].u * bc.y +
-                                             texture_coords[2].u * bc.z) *
-                                            this->diffuse_texture_->w));
-        int v = static_cast<int>(std::round((texture_coords[0].v * bc.x +
-                                             texture_coords[1].v * bc.y +
-                                             texture_coords[2].v * bc.z) *
-                                            this->diffuse_texture_->h));
+        // Interpolate intensity
+        float intensity = intensities[0] * bc.x + intensities[1] * bc.y +
+                          intensities[2] * bc.z;
 
-        Uint32 pixel = GetPixel(this->diffuse_texture_, u, v);
-        SDL_PixelFormat* format = this->diffuse_texture_->format;
-        Uint8 R = static_cast<Uint8>(
-            (((pixel & format->Rmask) >> format->Rshift) << format->Rloss) *
-            intensity);
-        Uint8 G = static_cast<Uint8>(
-            (((pixel & format->Gmask) >> format->Gshift) << format->Gloss) *
-            intensity);
-        Uint8 B = static_cast<Uint8>(
-            (((pixel & format->Bmask) >> format->Bshift) << format->Bloss) *
-            intensity);
-
-        SetPixel(this->surface_, x, y, SDL_MapRGB(format, R, G, B));
+        if (intensity > 0.f) {
+          SDL_PixelFormat* format = this->diffuse_texture_->format;
+          SetPixel(this->surface_, x, y,
+                   SDL_MapRGB(format, static_cast<Uint8>(200 * intensity),
+                              static_cast<Uint8>(200 * intensity),
+                              static_cast<Uint8>(200 * intensity)));
+        }
       }
     }
   }
@@ -257,10 +266,6 @@ void Renderer::DrawLine(int x0, int y0, int x1, int y1, Uint32 pixel) {
 void Renderer::SetPixel(SDL_Surface* surface, int x, int y, Uint32 pixel) {
   // flip surface vertically
   y = HEIGHT - y;
-  // avoid coordinate beyond surface
-  if (x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT) {
-    return;
-  }
 
   int bpp = surface->format->BytesPerPixel;
   /* Here p is the address to the pixel we want to set */

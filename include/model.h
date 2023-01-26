@@ -27,12 +27,16 @@ class Model {
   std::vector<int> GetFace(int index) const;
   std::vector<int> GetTextureIndices(int index) const;
   Vec2f GetTextureCoords(int index) const;
+  std::vector<int> GetNormalIndices(int index) const;
+  Vec3f GetNormalCoords(int index) const;
 
  private:
   std::vector<Vec3f> vertices_;
   std::vector<std::vector<int> > faces_;
   std::vector<std::vector<int> > texture_indices_;
   std::vector<Vec2f> texture_coords_;
+  std::vector<std::vector<int> > normal_indices_;
+  std::vector<Vec3f> normal_coords_;
 };
 }  // namespace swr
 
