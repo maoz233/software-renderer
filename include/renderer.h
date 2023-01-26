@@ -48,7 +48,9 @@ class Renderer {
                     const int& height);
   void CreateSurface();
 
-  void DrawTriangle(std::vector<Vec3f>& screen_coords, std::vector<float>);
+  void DrawTriangle(std::vector<Vec3f>& screen_coords,
+                    std::vector<Vec2f>& texture_coords,
+                    std::vector<float> intensities);
   // Bresenham's line algorithm
   void DrawLine(int x0, int y0, int x1, int y1, Uint32 pixel);
 
