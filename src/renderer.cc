@@ -11,6 +11,7 @@
 #include "renderer.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
@@ -70,64 +71,85 @@ void Renderer::Loop() {
   Mat4 viewport =
       Viewport(static_cast<float>(WIDTH), static_cast<float>(HEIGHT));
 
-  for (int i = 0; i < this->model_->GetFacesCount(); ++i) {
-    std::vector<int> face = this->model_->GetFace(i);
-    std::vector<int> normal_indices = this->model_->GetNormalIndices(i);
-    std::vector<int> texture_indices = this->model_->GetTextureIndices(i);
-
-    // Draw with line
-    // for (int j = 0; j < 3; ++j) {
-    //   Vec3f v0 = this->model_->GetVertex(face[j]);
-    //   Vec3f v1 = this->model_->GetVertex(face[(j + 1) % 3]);
-    //   int x0 = static_cast<int>((v0.x + 1) * WIDTH / 2.);
-    //   int y0 = static_cast<int>((v0.y + 1) * HEIGHT / 2.);
-    //   int x1 = static_cast<int>((v1.x + 1) * WIDTH / 2.);
-    //   int y1 = static_cast<int>((v1.y + 1) * HEIGHT / 2.);
-    //
-    //   DrawLine(x0, y0, x1, y1,
-    //            SDL_MapRGB(this->surface_->format, 255, 255, 255));
-    // }
-
-    // Draw with triangle
-    std::vector<Vec3f> screen_coords(3);
-    std::vector<Vec3f> normal_coords(3);
-    std::vector<Vec2f> texture_coords(3);
-    for (int j = 0; j < 3; ++j) {
-      Vec3f vertex = this->model_->GetVertex(face[j]);
-      Vec4 homo_vertex{};
-      homo_vertex[0][0] = vertex.x;
-      homo_vertex[1][0] = vertex.y;
-      homo_vertex[2][0] = vertex.z;
-      homo_vertex[3][0] = 1.f;
-      Vec4 v = viewport * projection * view * model * homo_vertex;
-      screen_coords[j] =
-          Vec3f(v[0][0] / v[3][0], v[1][0] / v[3][0], v[2][0] / v[3][0]);
-
-      Vec3f normal = this->model_->GetNormalCoords(normal_indices[j]);
-      Vec4 homo_normal{};
-      homo_normal[0][0] = normal.x;
-      homo_normal[1][0] = normal.y;
-      homo_normal[2][0] = normal.z;
-      homo_normal[3][0] = 1.f;
-      Vec4 n = view * model * homo_normal;
-      normal_coords[j] =
-          Vec3f(n[0][0] / n[3][0], n[1][0] / n[3][0], n[2][0] / n[3][0]);
-
-      texture_coords[j] = this->model_->GetTextureCoords(texture_indices[j]);
-    }
-
-    std::vector<float> intensities(3);
-    for (int j = 0; j < 3; ++j) {
-      intensities[j] = normal_coords[j].Normalize() * light_dir;
-    }
-
-    DrawTriangle(screen_coords, texture_coords, intensities);
-  }
-
-  SDL_UpdateWindowSurface(this->window_);
-
+  bool line_is_primitive = false;
   SDL_Event e;
   while (SDL_WaitEvent(&e) && e.type != SDL_QUIT) {
+    auto pre = std::chrono::system_clock::now().time_since_epoch();
+
+    switch (e.type) {
+      case SDL_KEYDOWN:
+        if (e.key.keysym.scancode == SDL_SCANCODE_F) {
+          line_is_primitive = !line_is_primitive;
+        }
+        break;
+      default:
+        break;
+    }
+
+    // Put rendering logic here
+    for (int i = 0; i < this->model_->GetFacesCount(); ++i) {
+      std::vector<int> face = this->model_->GetFace(i);
+      std::vector<int> normal_indices = this->model_->GetNormalIndices(i);
+      std::vector<int> texture_indices = this->model_->GetTextureIndices(i);
+
+      // Tranformation
+      std::vector<Vec3f> screen_coords(3);
+      for (int j = 0; j < 3; ++j) {
+        Vec3f vertex = this->model_->GetVertex(face[j]);
+        Vec4 homo_vertex{};
+        homo_vertex[0][0] = vertex.x;
+        homo_vertex[1][0] = vertex.y;
+        homo_vertex[2][0] = vertex.z;
+        homo_vertex[3][0] = 1.f;
+        Vec4 v = viewport * projection * view * model * homo_vertex;
+        screen_coords[j] =
+            Vec3f(v[0][0] / v[3][0], v[1][0] / v[3][0], v[2][0] / v[3][0]);
+      }
+
+      if (line_is_primitive) {
+        for (int j = 0; j < 3; ++j) {
+          int x0 = static_cast<int>(std::round(screen_coords[j].x));
+          int y0 = static_cast<int>(std::round(screen_coords[j].y));
+          int x1 = static_cast<int>(std::round(screen_coords[(j + 1) % 3].x));
+          int y1 = static_cast<int>(std::round(screen_coords[(j + 1) % 3].y));
+          Uint32 pixel = SDL_MapRGB(this->surface_->format, 255, 255, 255);
+          DrawLine(x0, y0, x1, y1, pixel);
+        }
+      } else {
+        std::vector<Vec3f> normal_coords(3);
+        std::vector<Vec2f> texture_coords(3);
+        std::vector<float> intensities(3);
+        for (int j = 0; j < 3; ++j) {
+          Vec3f normal = this->model_->GetNormalCoords(normal_indices[j]);
+          Vec4 homo_normal{};
+          homo_normal[0][0] = normal.x;
+          homo_normal[1][0] = normal.y;
+          homo_normal[2][0] = normal.z;
+          homo_normal[3][0] = 1.f;
+          Vec4 n = view * model * homo_normal;
+          normal_coords[j] =
+              Vec3f(n[0][0] / n[3][0], n[1][0] / n[3][0], n[2][0] / n[3][0]);
+
+          texture_coords[j] =
+              this->model_->GetTextureCoords(texture_indices[j]);
+
+          intensities[j] = normal_coords[j].Normalize() * light_dir;
+        }
+
+        DrawTriangle(screen_coords, texture_coords, intensities);
+      }
+    }
+
+    SDL_UpdateWindowSurface(this->window_);
+
+    auto cur = std::chrono::system_clock::now().time_since_epoch();
+    auto delta =
+        std::chrono::duration_cast<std::chrono::milliseconds>(cur - pre)
+            .count();
+    float fps = 1000.f / delta;
+
+    std::clog << "----- Delta Time: " << delta << ", FPS: " << fps << "-----"
+              << std::endl;
   }
 }
 
@@ -301,7 +323,6 @@ void Renderer::SetPixel(SDL_Surface* surface, int x, int y, Uint32 pixel) {
   int bpp = surface->format->BytesPerPixel;
   /* Here p is the address to the pixel we want to set */
   Uint8* p = (Uint8*)surface->pixels + y * surface->pitch + x * bpp;
-
   switch (bpp) {
     case 1:
       *p = static_cast<Uint8>(pixel);
