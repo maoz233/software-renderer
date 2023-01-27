@@ -55,6 +55,8 @@ void Renderer::Loop() {
 
   Vec3f light_dir(0.f, 0.f, -1.f);
 
+  Mat4 model = Mat4::Identity();
+
   Vec3f eye(0.f, 0.f, 3.f);
   Vec3f center(0.0f, 0.0f, 0.f);
   Mat4 view = LookAt(eye, center);
@@ -92,25 +94,31 @@ void Renderer::Loop() {
     std::vector<Vec2f> texture_coords(3);
     for (int j = 0; j < 3; ++j) {
       Vec3f vertex = this->model_->GetVertex(face[j]);
-
       Vec4 homo_vertex{};
       homo_vertex[0][0] = vertex.x;
       homo_vertex[1][0] = vertex.y;
       homo_vertex[2][0] = vertex.z;
       homo_vertex[3][0] = 1.f;
-
-      Vec4 v = (viewport * projection * view) * homo_vertex;
+      Vec4 v = viewport * projection * view * model * homo_vertex;
       screen_coords[j] =
           Vec3f(v[0][0] / v[3][0], v[1][0] / v[3][0], v[2][0] / v[3][0]);
 
+      Vec3f normal = this->model_->GetNormalCoords(normal_indices[j]);
+      Vec4 homo_normal{};
+      homo_normal[0][0] = normal.x;
+      homo_normal[1][0] = normal.y;
+      homo_normal[2][0] = normal.z;
+      homo_normal[3][0] = 1.f;
+      Vec4 n = view * model * homo_normal;
       normal_coords[j] =
-          this->model_->GetNormalCoords(normal_indices[j]).Normalize();
+          Vec3f(n[0][0] / n[3][0], n[1][0] / n[3][0], n[2][0] / n[3][0]);
+
       texture_coords[j] = this->model_->GetTextureCoords(texture_indices[j]);
     }
 
     std::vector<float> intensities(3);
     for (int j = 0; j < 3; ++j) {
-      intensities[j] = std::abs(normal_coords[j].Normalize() * light_dir);
+      intensities[j] = normal_coords[j].Normalize() * light_dir;
     }
 
     DrawTriangle(screen_coords, texture_coords, intensities);
