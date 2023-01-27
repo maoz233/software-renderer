@@ -84,6 +84,8 @@ void Renderer::Loop() {
           SDL_LockSurface(this->surface_);
           SDL_memset(this->surface_->pixels, 0,
                      this->surface_->h * this->surface_->pitch);
+          delete this->zbuffer_;
+          this->zbuffer_ = new std::vector<int>(HEIGHT * WIDTH, INT_MIN);
           SDL_UnlockSurface(this->surface_);
           SDL_UpdateWindowSurface(this->window_);
         }
