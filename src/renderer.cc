@@ -168,6 +168,7 @@ void Renderer::Terminate() {
   if (this->model_) {
     delete this->model_;
   }
+  SDL_FreeSurface(this->surface_);
   SDL_DestroyWindow(this->window_);
   SDL_Quit();
 }
