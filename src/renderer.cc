@@ -80,6 +80,12 @@ void Renderer::Loop() {
       case SDL_KEYDOWN:
         if (e.key.keysym.scancode == SDL_SCANCODE_F) {
           line_is_primitive = !line_is_primitive;
+
+          SDL_LockSurface(this->surface_);
+          SDL_memset(this->surface_->pixels, 0,
+                     this->surface_->h * this->surface_->pitch);
+          SDL_UnlockSurface(this->surface_);
+          SDL_UpdateWindowSurface(this->window_);
         }
         break;
       default:
