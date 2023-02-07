@@ -21,6 +21,7 @@
 #include "SDL.h"
 #include "SDL_image.h"
 #include "model.h"
+#include "shader.h"
 #include "utils.h"
 
 #if _WIN32
@@ -56,8 +57,6 @@ void Renderer::Loop() {
 
   Vec3f light_dir(0.f, 0.f, -1.f);
 
-  Mat4 model = Mat4::Identity();
-
   Vec3f eye(0.f, 0.f, 3.f);
   Vec3f center(0.0f, 0.0f, 0.f);
   Mat4 view = LookAt(eye, center);
@@ -70,6 +69,9 @@ void Renderer::Loop() {
 
   Mat4 viewport =
       Viewport(static_cast<float>(WIDTH), static_cast<float>(HEIGHT));
+
+  // Shader
+  this->shader_ = new Shader(viewport, projection, view);
 
   bool line_is_primitive = false;
   SDL_Event e;
@@ -100,18 +102,11 @@ void Renderer::Loop() {
       std::vector<int> normal_indices = this->model_->GetNormalIndices(i);
       std::vector<int> texture_indices = this->model_->GetTextureIndices(i);
 
-      // Tranformation
+      // Transformation
       std::vector<Vec3f> screen_coords(3);
       for (int j = 0; j < 3; ++j) {
         Vec3f vertex = this->model_->GetVertex(face[j]);
-        Vec4 homo_vertex{};
-        homo_vertex[0][0] = vertex.x;
-        homo_vertex[1][0] = vertex.y;
-        homo_vertex[2][0] = vertex.z;
-        homo_vertex[3][0] = 1.f;
-        Vec4 v = viewport * projection * view * model * homo_vertex;
-        screen_coords[j] =
-            Vec3f(v[0][0] / v[3][0], v[1][0] / v[3][0], v[2][0] / v[3][0]);
+        this->shader_->Vertex(vertex, screen_coords[j]);
       }
 
       if (line_is_primitive) {
@@ -126,25 +121,14 @@ void Renderer::Loop() {
       } else {
         std::vector<Vec3f> normal_coords(3);
         std::vector<Vec2f> texture_coords(3);
-        std::vector<float> intensities(3);
         for (int j = 0; j < 3; ++j) {
           Vec3f normal = this->model_->GetNormalCoords(normal_indices[j]);
-          Vec4 homo_normal{};
-          homo_normal[0][0] = normal.x;
-          homo_normal[1][0] = normal.y;
-          homo_normal[2][0] = normal.z;
-          homo_normal[3][0] = 1.f;
-          Vec4 n = view * model * homo_normal;
-          normal_coords[j] =
-              Vec3f(n[0][0] / n[3][0], n[1][0] / n[3][0], n[2][0] / n[3][0]);
 
           texture_coords[j] =
               this->model_->GetTextureCoords(texture_indices[j]);
-
-          intensities[j] = normal_coords[j].Normalize() * light_dir;
         }
 
-        DrawTriangle(screen_coords, texture_coords, intensities);
+        DrawTriangle(light_dir, screen_coords, texture_coords, normal_coords);
       }
     }
 
@@ -154,7 +138,7 @@ void Renderer::Loop() {
     auto delta =
         std::chrono::duration_cast<std::chrono::milliseconds>(cur - pre)
             .count();
-    float fps = 1000.f / delta;
+    int fps = static_cast<int>(1000.f / delta);
 
     std::clog << "----- Delta Time: " << delta << ", FPS: " << fps << "-----"
               << std::endl;
@@ -218,9 +202,9 @@ void Renderer::CreateSurface() {
   }
 }
 
-void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
+void Renderer::DrawTriangle(Vec3f& light, std::vector<Vec3f>& screen_coords,
                             std::vector<Vec2f>& texture_coords,
-                            std::vector<float> intensities) {
+                            std::vector<Vec3f>& normal_coords) {
   // Bounding Box
   int x_min = static_cast<int>(std::round(std::min(
       std::min(screen_coords[0].x, screen_coords[1].x), screen_coords[2].x)));
@@ -254,34 +238,12 @@ void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
         // Update z index
         (*(this->zbuffer_))[x + y * WIDTH] = z;
 
-        // Interpolate intensity
-        float intensity = intensities[0] * bc.x + intensities[1] * bc.y +
-                          intensities[2] * bc.z;
-
-        if (intensity > 0.f) {
-          // Interpolate texture coordinates
-          int u = static_cast<int>(std::round((texture_coords[0].u * bc.x +
-                                               texture_coords[1].u * bc.y +
-                                               texture_coords[2].u * bc.z) *
-                                              this->diffuse_texture_->w));
-          int v = static_cast<int>(std::round((texture_coords[0].v * bc.x +
-                                               texture_coords[1].v * bc.y +
-                                               texture_coords[2].v * bc.z) *
-                                              this->diffuse_texture_->h));
-
-          Uint32 pixel = GetPixel(this->diffuse_texture_, u, v);
-          SDL_PixelFormat* format = this->diffuse_texture_->format;
-          Uint8 R = static_cast<Uint8>(
-              (((pixel & format->Rmask) >> format->Rshift) << format->Rloss) *
-              intensity);
-          Uint8 G = static_cast<Uint8>(
-              (((pixel & format->Gmask) >> format->Gshift) << format->Gloss) *
-              intensity);
-          Uint8 B = static_cast<Uint8>(
-              (((pixel & format->Bmask) >> format->Bshift) << format->Bloss) *
-              intensity);
-
-          SetPixel(this->surface_, x, y, SDL_MapRGB(format, R, G, B));
+        Uint32 pixel = 0;
+        bool not_discard =
+            this->shader_->Fragment(light, bc, texture_coords, normal_coords,
+                                    this->diffuse_texture_, pixel);
+        if (not_discard) {
+          SetPixel(this->surface_, x, y, pixel);
         }
       }
     }
@@ -356,39 +318,6 @@ void Renderer::SetPixel(SDL_Surface* surface, int x, int y, Uint32 pixel) {
     case 4:
       *(Uint32*)p = pixel;
       break;
-  }
-}
-
-Uint32 Renderer::GetPixel(SDL_Surface* surface, int x, int y) {
-  // flip surface vertically
-  y = surface->h - y;
-  // avoid coordinate beyond surface
-  if (x < 0 || y < 0 || x >= surface->w || y >= surface->h) {
-    return SDL_MapRGB(surface->format, 255, 255, 255);
-  }
-
-  int bpp = surface->format->BytesPerPixel;
-  /* Here p is the address to the pixel we want to retrieve */
-  Uint8* p = (Uint8*)surface->pixels + y * surface->pitch + x * bpp;
-
-  switch (bpp) {
-    case 1:
-      return *p;
-
-    case 2:
-      return *(Uint16*)p;
-
-    case 3:
-      if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
-        return p[0] << 16 | p[1] << 8 | p[2];
-      else
-        return p[0] | p[1] << 8 | p[2] << 16;
-
-    case 4:
-      return *(Uint32*)p;
-
-    default:
-      return 0; /* shouldn't happen, but avoids warnings */
   }
 }
 

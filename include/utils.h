@@ -188,6 +188,8 @@ struct Mat {
   int rows, cols;
 
   Mat<M, N>();
+  template <int I, int J>
+  Mat(Mat<I, J> mat);
 
   std::vector<float>& operator[](int index);
   template <int O>
@@ -207,6 +209,21 @@ Mat<M, N>::Mat()
     : m(std::vector<std::vector<float> >(M, std::vector<float>(N, 0.f))),
       rows(M),
       cols(N) {}
+
+template <int M, int N>
+template <int I, int J>
+Mat<M, N>::Mat(Mat<I, J> mat)
+    : m(std::vector<std::vector<float> >(M, std::vector<float>(N, 0.f))),
+      rows(M),
+      cols(N) {
+  assert(M == I && N == J);
+
+  for (int i = 0; i < I; ++i) {
+    for (int j = 0; j < J; ++j) {
+      this->m[i][j] = Mat[i][j];
+    }
+  }
+}
 
 template <int M, int N>
 std::vector<float>& Mat<M, N>::operator[](int index) {

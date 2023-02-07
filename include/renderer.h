@@ -15,6 +15,7 @@
 
 #include "SDL.h"
 #include "model.h"
+#include "shader.h"
 #include "utils.h"
 
 namespace swr {
@@ -48,15 +49,13 @@ class Renderer {
                     const int& height);
   void CreateSurface();
 
-  void DrawTriangle(std::vector<Vec3f>& screen_coords,
+  void DrawTriangle(Vec3f& light, std::vector<Vec3f>& screen_coords,
                     std::vector<Vec2f>& texture_coords,
-                    std::vector<float> intensities);
+                    std::vector<Vec3f>& normal_coords);
   // Bresenham's line algorithm
   void DrawLine(int x0, int y0, int x1, int y1, Uint32 pixel);
 
   void SetPixel(SDL_Surface* surface, int x, int y, Uint32 pixel);
-
-  Uint32 GetPixel(SDL_Surface* surface, int x, int y);
 
   static bool InsideTriangle(int x, int y, Vec2i& v0, Vec2i& v1, Vec2i& v2);
   // Barycentric Coordinates
@@ -68,6 +67,7 @@ class Renderer {
   Model* model_;
   std::vector<int>* zbuffer_;
   SDL_Surface* diffuse_texture_;
+  Shader* shader_;
 };
 }  // namespace swr
 
