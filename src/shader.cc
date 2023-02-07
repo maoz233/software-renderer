@@ -13,6 +13,7 @@
 #include <algorithm>
 
 #include "SDL.h"
+#include "utils.h"
 
 #if _WIN32
 #pragma warning(disable : 4127)

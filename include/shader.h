@@ -28,9 +28,9 @@ class Shader {
                         Uint32& pixel);
 
  protected:
-  Mat4 view_;
-  Mat4 projection_;
   Mat4 viewport_;
+  Mat4 projection_;
+  Mat4 view_;
 };
 
 class BlinnPhongShader : public Shader {
