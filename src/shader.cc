@@ -122,4 +122,90 @@ bool Shader::Fragment(Vec3f& light, Vec3f& barycentric,
   return intensity > 0.f;
 }
 
+BlinnPhongShader::BlinnPhongShader(Mat4 viewport, Mat4 projection, Mat4 view)
+    : Shader(viewport, projection, view) {
+  std::clog << "----- BlinnPhongShader::BlinnPhongShader -----" << std::endl;
+}
+
+BlinnPhongShader::~BlinnPhongShader() {
+  std::clog << "----- BlinnPhongShader::~BlinnPhongShader -----" << std::endl;
+}
+
+void BlinnPhongShader::Vertex(Vec3f& vertex, Vec3f& coord) {
+  Vec4 homo_vertex{};
+  homo_vertex[0][0] = vertex.x;
+  homo_vertex[1][0] = vertex.y;
+  homo_vertex[2][0] = vertex.z;
+  homo_vertex[3][0] = 1.f;
+
+  Vec4 v = this->viewport_ * this->projection_ * this->view_ * homo_vertex;
+  coord = Vec3f(v[0][0] / v[3][0], v[1][0] / v[3][0], v[2][0] / v[3][0]);
+}
+
+// Blinn-Phong Shading
+bool BlinnPhongShader::Fragment(Vec3f& light, Vec3f& barycentric,
+                                std::vector<Vec2f>& texture_coords,
+                                std::vector<Vec3f>& normal_coords,
+                                SDL_Surface* texture, Uint32& pixel) {
+  for (int i = 0; i < 3; ++i) {
+    Vec4 homo_normal{};
+    homo_normal[0][0] = normal_coords[i].x;
+    homo_normal[1][0] = normal_coords[i].y;
+    homo_normal[2][0] = normal_coords[i].z;
+    homo_normal[3][0] = 1.f;
+
+    Vec4 n = this->view_ * homo_normal;
+    Vec3f normal_coord(n[0][0] / n[3][0], n[1][0] / n[3][0], n[2][0] / n[3][0]);
+  }
+
+  // Interpolated texture coordinates
+  int u = static_cast<int>(std::round((texture_coords[0].u * barycentric.x +
+                                       texture_coords[1].u * barycentric.y +
+                                       texture_coords[2].u * barycentric.z) *
+                                      texture->w));
+  int v = static_cast<int>(std::round((texture_coords[0].v * barycentric.x +
+                                       texture_coords[1].v * barycentric.y +
+                                       texture_coords[2].v * barycentric.z) *
+                                      texture->h));
+
+  // Interpolated noraml
+  Vec3f normal(
+      normal_coords[0].x * barycentric.x + normal_coords[1].x * barycentric.y +
+          normal_coords[2].x * barycentric.z,
+      normal_coords[0].y * barycentric.x + normal_coords[1].y * barycentric.y +
+          normal_coords[2].y * barycentric.z,
+      normal_coords[0].z * barycentric.z + normal_coords[1].z * barycentric.y +
+          normal_coords[2].z * barycentric.z);
+
+  // Interpolated intensity
+  float intensity = std::max(normal.Normalize() * light.Normalize(), 0.f);
+
+  // Sampling from diffuse texture
+  Uint32 p = GetPixel(texture, u, v);
+  SDL_PixelFormat* format = texture->format;
+
+  // Ambient
+  Uint8 R_ambient = static_cast<Uint8>(
+      (((p & format->Rmask) >> format->Rshift) << format->Rloss) * .05f);
+  Uint8 G_ambient = static_cast<Uint8>(
+      (((p & format->Gmask) >> format->Gshift) << format->Gloss) * .05f);
+  Uint8 B_ambient = static_cast<Uint8>(
+      (((p & format->Bmask) >> format->Bshift) << format->Bloss) * .05f);
+
+  // Diffsuse
+  Uint8 R_diff = static_cast<Uint8>(
+      (((p & format->Rmask) >> format->Rshift) << format->Rloss) * intensity);
+  Uint8 G_diff = static_cast<Uint8>(
+      (((p & format->Gmask) >> format->Gshift) << format->Gloss) * intensity);
+  Uint8 B_diff = static_cast<Uint8>(
+      (((p & format->Bmask) >> format->Bshift) << format->Bloss) * intensity);
+
+  // Specular
+
+  pixel = SDL_MapRGB(format, R_ambient + R_diff, G_ambient + G_diff,
+                     B_ambient + B_diff);
+
+  return intensity > 0.f;
+}
+
 }  // namespace swr

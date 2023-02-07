@@ -122,8 +122,7 @@ void Renderer::Loop() {
         std::vector<Vec3f> normal_coords(3);
         std::vector<Vec2f> texture_coords(3);
         for (int j = 0; j < 3; ++j) {
-          Vec3f normal = this->model_->GetNormalCoords(normal_indices[j]);
-
+          normal_coords[j] = this->model_->GetNormalCoords(normal_indices[j]);
           texture_coords[j] =
               this->model_->GetTextureCoords(texture_indices[j]);
         }

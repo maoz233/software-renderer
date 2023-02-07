@@ -33,6 +33,18 @@ class Shader {
   Mat4 viewport_;
 };
 
+class BlinnPhongShader : public Shader {
+ public:
+  BlinnPhongShader(Mat4 viewport, Mat4 projection, Mat4 view);
+  ~BlinnPhongShader();
+
+  void Vertex(Vec3f& vertex, Vec3f& coord) override;
+  bool Fragment(Vec3f& light, Vec3f& barycentric,
+                std::vector<Vec2f>& texture_coords,
+                std::vector<Vec3f>& normal_coords, SDL_Surface* texture,
+                Uint32& pixel) override;
+};
+
 }  // namespace swr
 
 #endif  // SOFTWARE_RENDERER_INCLUDE_SHADER_H_

@@ -220,7 +220,7 @@ Mat<M, N>::Mat(Mat<I, J> mat)
 
   for (int i = 0; i < I; ++i) {
     for (int j = 0; j < J; ++j) {
-      this->m[i][j] = Mat[i][j];
+      this->m[i][j] = mat[i][j];
     }
   }
 }
