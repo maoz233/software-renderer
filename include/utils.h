@@ -45,6 +45,7 @@ struct Vec2 {
   inline Vec2<T> operator+(const Vec2<T>& v) const;
   inline Vec2<T> operator-(const Vec2<T>& v) const;
   inline Vec2<T> operator*(float f) const;
+  inline void Vec2<T>::operator=(const Vec2<T>& v);
   inline T operator[](int index) const;
 
   template <typename>
@@ -70,6 +71,12 @@ Vec2<T> Vec2<T>::operator-(const Vec2<T>& v) const {
 template <typename T>
 Vec2<T> Vec2<T>::operator*(float f) const {
   return Vec2<T>(x * f, y * f);
+}
+
+template <typename T>
+void Vec2<T>::operator=(const Vec2<T>& vec) {
+  x = vec.x;
+  y = vec.y;
 }
 
 template <typename T>
@@ -109,6 +116,7 @@ struct Vec3 {
   inline Vec3<T> operator+(const Vec3<T>& v) const;
   inline Vec3<T> operator-(const Vec3<T>& v) const;
   inline Vec3<T> operator*(float f) const;
+  inline void operator=(const Vec3<T>& v);
   inline T operator[](int index) const;
   // Dot product
   inline T operator*(const Vec3<T>& v) const;
@@ -117,6 +125,8 @@ struct Vec3 {
   inline float Norm();
   // Normalize
   inline Vec3<T>& Normalize(T l = 1);
+  // Reflect
+  inline Vec3<T> Reflect(Vec3<T>& v, Vec3<T>& normal);
 
   template <typename>
   friend std::ostream& operator<<(std::ostream& out, Vec3<T>& v);
@@ -141,6 +151,13 @@ Vec3<T> Vec3<T>::operator+(const Vec3<T>& v) const {
 template <typename T>
 Vec3<T> Vec3<T>::operator-(const Vec3<T>& v) const {
   return Vec3<T>(x - v.x, y - v.y, z - v.z);
+}
+
+template <typename T>
+void Vec3<T>::operator=(const Vec3<T>& v) {
+  x = v.x;
+  y = v.y;
+  z = v.z;
 }
 
 template <typename T>
@@ -173,6 +190,11 @@ Vec3<T>& Vec3<T>::Normalize(T l) {
 }
 
 template <typename T>
+Vec3<T> Reflect(Vec3<T>& v, Vec3<T>& normal) {
+  return v - 2 * (v * normal) * normal;
+}
+
+template <typename T>
 std::ostream& operator<<(std::ostream& out, Vec3<T>& v) {
   out << "(" << v.x << ", " << v.y << ", " << v.z << ")\n";
 
@@ -191,6 +213,7 @@ struct Mat {
   template <int I, int J>
   Mat(Mat<I, J> mat);
 
+  void operator=(Mat<M, N>& mat);
   std::vector<float>& operator[](int index);
   template <int O>
   Mat<M, O> operator*(Mat<N, O> mat) const;
@@ -220,6 +243,15 @@ Mat<M, N>::Mat(Mat<I, J> mat)
 
   for (int i = 0; i < I; ++i) {
     for (int j = 0; j < J; ++j) {
+      this->m[i][j] = mat[i][j];
+    }
+  }
+}
+
+template <int M, int N>
+void Mat<M, N>::operator=(Mat<M, N>& mat) {
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
       this->m[i][j] = mat[i][j];
     }
   }

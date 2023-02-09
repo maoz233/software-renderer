@@ -71,7 +71,18 @@ void Renderer::Loop() {
       Viewport(static_cast<float>(WIDTH), static_cast<float>(HEIGHT));
 
   // Shader
-  this->shader_ = new Shader(viewport, projection, view);
+  this->shader_ = new Shader();
+
+  // Uniform data for vertex shader
+  VertexUniform vertex_uniform{};
+  vertex_uniform.SetMat4(Matrix::VIEWPORT, viewport);
+  vertex_uniform.SetMat4(Matrix::PROJECTION, projection);
+  vertex_uniform.SetMat4(Matrix::VIEW, view);
+
+  // Uniform data for fragment shader
+  FragmentUniform fragment_uniform{};
+  fragment_uniform.SetVec3f(Vector::LIGHT, light_dir);
+  fragment_uniform.SetTexture(Texture::DIFFUSE_TEXTURE, this->diffuse_texture_);
 
   bool line_is_primitive = false;
   SDL_Event e;
@@ -106,7 +117,8 @@ void Renderer::Loop() {
       std::vector<Vec3f> screen_coords(3);
       for (int j = 0; j < 3; ++j) {
         Vec3f vertex = this->model_->GetVertex(face[j]);
-        this->shader_->Vertex(vertex, screen_coords[j]);
+        vertex_uniform.SetVec3f(vertex);
+        this->shader_->Vertex(vertex_uniform, screen_coords[j]);
       }
 
       if (line_is_primitive) {
@@ -127,7 +139,8 @@ void Renderer::Loop() {
               this->model_->GetTextureCoords(texture_indices[j]);
         }
 
-        DrawTriangle(light_dir, screen_coords, texture_coords, normal_coords);
+        DrawTriangle(fragment_uniform, screen_coords, texture_coords,
+                     normal_coords);
       }
     }
 
@@ -139,7 +152,7 @@ void Renderer::Loop() {
             .count();
     int fps = static_cast<int>(1000.f / delta);
 
-    std::clog << "----- Delta Time: " << delta << ", FPS: " << fps << "-----"
+    std::clog << "----- Delta Time: " << delta << ", FPS: " << fps << " -----"
               << std::endl;
   }
 }
@@ -168,7 +181,7 @@ void Renderer::LoadModel(const std::string& filename) {
 }
 
 void Renderer::LoadDiffuseTexture(const std::string& filename) {
-  std::clog << "----- Renderer::LoadTexture -----" << std::endl;
+  std::clog << "----- Renderer::LoadDiffuseTexture -----" << std::endl;
 
   SDL_Surface* texture = IMG_Load(filename.c_str());
   this->diffuse_texture_ =
@@ -201,7 +214,8 @@ void Renderer::CreateSurface() {
   }
 }
 
-void Renderer::DrawTriangle(Vec3f& light, std::vector<Vec3f>& screen_coords,
+void Renderer::DrawTriangle(FragmentUniform& fragment_uniform,
+                            std::vector<Vec3f>& screen_coords,
                             std::vector<Vec2f>& texture_coords,
                             std::vector<Vec3f>& normal_coords) {
   // Bounding Box
@@ -216,7 +230,7 @@ void Renderer::DrawTriangle(Vec3f& light, std::vector<Vec3f>& screen_coords,
 
   for (int x = x_min; x <= x_max; ++x) {
     for (int y = y_min; y <= y_max; ++y) {
-      // avoid coordinate beyond surface
+      // Avoid coordinate beyond surface
       if (x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT) {
         continue;
       }
@@ -228,23 +242,38 @@ void Renderer::DrawTriangle(Vec3f& light, std::vector<Vec3f>& screen_coords,
         continue;
       }
 
-      // Interpolate z index
+      // Interpolated z index
       int z = static_cast<int>(std::round(screen_coords[0].z * bc.x +
                                           screen_coords[1].z * bc.y +
                                           screen_coords[2].z * bc.z));
 
-      if ((*(this->zbuffer_))[x + y * WIDTH] < z) {
-        // Update z index
-        (*(this->zbuffer_))[x + y * WIDTH] = z;
-
-        Uint32 pixel = 0;
-        bool not_discard =
-            this->shader_->Fragment(light, bc, texture_coords, normal_coords,
-                                    this->diffuse_texture_, pixel);
-        if (not_discard) {
-          SetPixel(this->surface_, x, y, pixel);
-        }
+      // Depth test
+      if ((*(this->zbuffer_))[x + y * WIDTH] >= z) {
+        continue;
       }
+
+      // Update z index
+      (*(this->zbuffer_))[x + y * WIDTH] = z;
+
+      // TO-DO: interpolated normal vector
+      fragment_uniform.SetVec3f(Vector::NORMAL, normal_coords[0]);
+
+      // Interpolated texture coordinates
+      int u = static_cast<int>(
+          std::round((texture_coords[0].u * bc.x + texture_coords[1].u * bc.y +
+                      texture_coords[2].u * bc.z) *
+                     this->diffuse_texture_->w));
+      int v = static_cast<int>(
+          std::round((texture_coords[0].v * bc.x + texture_coords[1].v * bc.y +
+                      texture_coords[2].v * bc.z) *
+                     this->diffuse_texture_->h));
+      Vec2i uv{u, v};
+      fragment_uniform.SetVec2i(uv);
+
+      Uint32 pixel = 0;
+      this->shader_->Fragment(fragment_uniform, pixel);
+
+      SetPixel(this->surface_, x, y, pixel);
     }
   }
 }

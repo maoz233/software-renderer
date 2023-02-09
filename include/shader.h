@@ -10,22 +10,49 @@
  */
 #ifndef SOFTWARE_RENDERER_INCLUDE_SHADER_H_
 #define SOFTWARE_RENDERER_INCLUDE_SHADER_H_
+#include <vector>
+
 #include "SDL.h"
 #include "utils.h"
 
 namespace swr {
-Uint32 GetPixel(SDL_Surface* surface, int x, int y);
+
+enum Matrix { VIEWPORT, PROJECTION, VIEW };
+
+enum Vector { LIGHT, NORMAL, COORD };
+
+enum Texture { DIFFUSE_TEXTURE, NORMAL_TEXTURE };
+
+struct VertexUniform {
+  Vec3f vertex;
+  Mat4 viewport;
+  Mat4 projection;
+  Mat4 view;
+
+  void SetVec3f(Vec3f& vec);
+  void SetMat4(int name, Mat4& mat);
+};
+
+struct FragmentUniform {
+  float intensity;
+  Vec2i uv;
+  Vec3f light;
+  Vec3f normal;
+  Vec3f fragment_coord;
+  SDL_Surface* diffuse_texture;
+
+  void SetVec2i(Vec2i& vec);
+  void SetVec3f(int name, Vec3f& vec);
+  void SetTexture(int name, SDL_Surface* texture);
+};
 
 class Shader {
  public:
-  Shader(Mat4 viewport, Mat4 projection, Mat4 view);
-  virtual ~Shader();
+  Shader() = default;
+  virtual ~Shader() = default;
 
-  virtual void Vertex(Vec3f& vertex, Vec3f& coord);
-  virtual bool Fragment(Vec3f& light, Vec3f& barycentric,
-                        std::vector<Vec2f>& texture_coords,
-                        std::vector<Vec3f>& normal_coords, SDL_Surface* texture,
-                        Uint32& pixel);
+  virtual void Vertex(VertexUniform& uniform, Vec3f& position);
+  virtual void Fragment(FragmentUniform& uniform, Uint32& pixel);
 
  protected:
   Mat4 viewport_;
@@ -35,15 +62,13 @@ class Shader {
 
 class BlinnPhongShader : public Shader {
  public:
-  BlinnPhongShader(Mat4 viewport, Mat4 projection, Mat4 view);
-  ~BlinnPhongShader();
+  BlinnPhongShader() = default;
+  virtual ~BlinnPhongShader() = default;
 
-  void Vertex(Vec3f& vertex, Vec3f& coord) override;
-  bool Fragment(Vec3f& light, Vec3f& barycentric,
-                std::vector<Vec2f>& texture_coords,
-                std::vector<Vec3f>& normal_coords, SDL_Surface* texture,
-                Uint32& pixel) override;
+  void Fragment(FragmentUniform& uniform, Uint32& pixel) override;
 };
+
+Uint32 GetPixel(SDL_Surface* surface, int x, int y);
 
 }  // namespace swr
 
