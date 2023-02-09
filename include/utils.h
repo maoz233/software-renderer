@@ -45,7 +45,9 @@ struct Vec2 {
   inline Vec2<T> operator+(const Vec2<T>& v) const;
   inline Vec2<T> operator-(const Vec2<T>& v) const;
   inline Vec2<T> operator*(float f) const;
+#if _WIN32
   inline void Vec2<T>::operator=(const Vec2<T>& v);
+#endif
   inline T operator[](int index) const;
 
   template <typename>
@@ -73,11 +75,13 @@ Vec2<T> Vec2<T>::operator*(float f) const {
   return Vec2<T>(x * f, y * f);
 }
 
+#if _WIN32
 template <typename T>
 void Vec2<T>::operator=(const Vec2<T>& vec) {
   x = vec.x;
   y = vec.y;
 }
+#endif
 
 template <typename T>
 T Vec2<T>::operator[](int index) const {
@@ -116,7 +120,9 @@ struct Vec3 {
   inline Vec3<T> operator+(const Vec3<T>& v) const;
   inline Vec3<T> operator-(const Vec3<T>& v) const;
   inline Vec3<T> operator*(float f) const;
+#if _WIN32
   inline void operator=(const Vec3<T>& v);
+#endif
   inline T operator[](int index) const;
   // Dot product
   inline T operator*(const Vec3<T>& v) const;
@@ -153,12 +159,14 @@ Vec3<T> Vec3<T>::operator-(const Vec3<T>& v) const {
   return Vec3<T>(x - v.x, y - v.y, z - v.z);
 }
 
+#if _WIN32
 template <typename T>
 void Vec3<T>::operator=(const Vec3<T>& v) {
   x = v.x;
   y = v.y;
   z = v.z;
 }
+#endif
 
 template <typename T>
 T Vec3<T>::operator[](int index) const {
@@ -213,7 +221,10 @@ struct Mat {
   template <int I, int J>
   Mat(Mat<I, J> mat);
 
+#if _WIN32
   void operator=(Mat<M, N>& mat);
+#endif
+
   std::vector<float>& operator[](int index);
   template <int O>
   Mat<M, O> operator*(Mat<N, O> mat) const;
@@ -248,6 +259,7 @@ Mat<M, N>::Mat(Mat<I, J> mat)
   }
 }
 
+#if _WIN32
 template <int M, int N>
 void Mat<M, N>::operator=(Mat<M, N>& mat) {
   for (int i = 0; i < M; ++i) {
@@ -256,6 +268,7 @@ void Mat<M, N>::operator=(Mat<M, N>& mat) {
     }
   }
 }
+#endif
 
 template <int M, int N>
 std::vector<float>& Mat<M, N>::operator[](int index) {
