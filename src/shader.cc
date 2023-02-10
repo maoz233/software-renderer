@@ -11,6 +11,7 @@
 #include "shader.h"
 
 #include <algorithm>
+#include <cmath>
 #include <vector>
 
 #include "SDL.h"
@@ -50,6 +51,12 @@ void FragmentUniform::SetVec3f(int name, Vec3f& vec) {
     case Vector::NORMAL:
       this->normal = vec;
       break;
+    case Vector::EYE:
+      this->eye = vec;
+      break;
+    case Vector::FRAGMENT:
+      this->fragment = vec;
+      break;
     default:
       break;
   }
@@ -78,63 +85,51 @@ void Shader::Vertex(VertexUniform& uniform, Vec3f& position) {
 
 // Flat Shading
 void Shader::Fragment(FragmentUniform& uniform, Uint32& pixel) {
-  // Intensity
-  float intensity = 0.75f;
-  // Discard
-  if (intensity <= 0.f) {
-    return;
-  }
-
-  // Sampling from diffuse texture
+  // Sampling pixel from diffuse texture
   Uint32 p = GetPixel(uniform.diffuse_texture, uniform.uv.u, uniform.uv.v);
   SDL_PixelFormat* format = uniform.diffuse_texture->format;
 
-  // Diffuse
   Uint8 R = static_cast<Uint8>(
-      (((p & format->Rmask) >> format->Rshift) << format->Rloss) * intensity);
+      (((p & format->Rmask) >> format->Rshift) << format->Rloss));
   Uint8 G = static_cast<Uint8>(
-      (((p & format->Gmask) >> format->Gshift) << format->Gloss) * intensity);
+      (((p & format->Gmask) >> format->Gshift) << format->Gloss));
   Uint8 B = static_cast<Uint8>(
-      (((p & format->Bmask) >> format->Bshift) << format->Bloss) * intensity);
+      (((p & format->Bmask) >> format->Bshift) << format->Bloss));
 
   pixel = SDL_MapRGB(format, R, G, B);
 }
 
-// Blinn-Phong Shading
-void BlinnPhongShader::Fragment(FragmentUniform& uniform, Uint32& pixel) {
-  // Intensity
-  float intensity =
-      std::max(uniform.light.Normalize() * uniform.normal.Normalize(), 0.f);
-
-  // Discard
-  if (intensity <= 0.f) {
-    return;
-  }
+// Phong Shading
+void PhongShader::Fragment(FragmentUniform& uniform, Uint32& pixel) {
+  // Ambient light intensity
+  float ambient = .05f;
+  // Diffuse light intensity
+  float diff =
+      std::max(uniform.normal.Normalize() * uniform.light.Normalize(), 0.f);
+  // Specular light intensity
+  Vec3f view_dir = (uniform.fragment - uniform.eye).Normalize();
+  Vec3f negative_light{-uniform.light.x, -uniform.light.y, -uniform.light.z};
+  Vec3f reflect_dir =
+      Reflect(negative_light.Normalize(), uniform.normal.Normalize());
+  float spec = static_cast<float>(
+      .5f * std::pow(std::max(view_dir * reflect_dir, 0.f), 32));
 
   // Sampling from diffuse texture
   Uint32 p = GetPixel(uniform.diffuse_texture, uniform.uv.u, uniform.uv.v);
   SDL_PixelFormat* format = uniform.diffuse_texture->format;
 
-  // Ambient
-  Uint8 R_ambient = static_cast<Uint8>(
-      (((p & format->Rmask) >> format->Rshift) << format->Rloss) * .05f);
-  Uint8 G_ambient = static_cast<Uint8>(
-      (((p & format->Gmask) >> format->Gshift) << format->Gloss) * .05f);
-  Uint8 B_ambient = static_cast<Uint8>(
-      (((p & format->Bmask) >> format->Bshift) << format->Bloss) * .05f);
+  // R, G, B channels
+  Uint8 R = static_cast<Uint8>(
+      (((p & format->Rmask) >> format->Rshift) << format->Rloss) *
+      (ambient + diff + spec));
+  Uint8 G = static_cast<Uint8>(
+      (((p & format->Gmask) >> format->Gshift) << format->Gloss) *
+      (ambient + diff + spec));
+  Uint8 B = static_cast<Uint8>(
+      (((p & format->Bmask) >> format->Bshift) << format->Bloss) *
+      (ambient + diff + spec));
 
-  // Diffsuse
-  Uint8 R_diff = static_cast<Uint8>(
-      (((p & format->Rmask) >> format->Rshift) << format->Rloss) * intensity);
-  Uint8 G_diff = static_cast<Uint8>(
-      (((p & format->Gmask) >> format->Gshift) << format->Gloss) * intensity);
-  Uint8 B_diff = static_cast<Uint8>(
-      (((p & format->Bmask) >> format->Bshift) << format->Bloss) * intensity);
-
-  // Specular
-
-  pixel = SDL_MapRGB(format, R_ambient + R_diff, G_ambient + G_diff,
-                     B_ambient + B_diff);
+  pixel = SDL_MapRGB(format, R, G, B);
 }
 
 Uint32 GetPixel(SDL_Surface* surface, int x, int y) {

@@ -82,6 +82,7 @@ void Renderer::Loop() {
   // Uniform data for fragment shader
   FragmentUniform fragment_uniform{};
   fragment_uniform.SetVec3f(Vector::LIGHT, light_dir);
+  fragment_uniform.SetVec3f(Vector::EYE, eye);
   fragment_uniform.SetTexture(Texture::DIFFUSE_TEXTURE, this->diffuse_texture_);
 
   bool line_is_primitive = false;
@@ -256,7 +257,12 @@ void Renderer::DrawTriangle(FragmentUniform& fragment_uniform,
       (*(this->zbuffer_))[x + y * WIDTH] = z;
 
       // TO-DO: interpolated normal vector
-      fragment_uniform.SetVec3f(Vector::NORMAL, normal_coords[0]);
+      Vec3f normal = normal_coords[0] + normal_coords[1] + normal_coords[2];
+      fragment_uniform.SetVec3f(Vector::NORMAL, normal);
+
+      // TO-DO: interpolated fragment coordinates
+      Vec3f fragment{};
+      fragment_uniform.SetVec3f(Vector::FRAGMENT, fragment);
 
       // Interpolated texture coordinates
       int u = static_cast<int>(

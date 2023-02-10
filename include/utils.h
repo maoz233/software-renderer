@@ -199,7 +199,7 @@ Vec3<T>& Vec3<T>::Normalize(T l) {
 
 template <typename T>
 Vec3<T> Reflect(Vec3<T>& v, Vec3<T>& normal) {
-  return v - 2 * (v * normal) * normal;
+  return v - normal * 2 * (v * normal);
 }
 
 template <typename T>

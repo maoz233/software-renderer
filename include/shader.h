@@ -19,7 +19,7 @@ namespace swr {
 
 enum Matrix { VIEWPORT, PROJECTION, VIEW };
 
-enum Vector { LIGHT, NORMAL, COORD };
+enum Vector { LIGHT, NORMAL, EYE, FRAGMENT };
 
 enum Texture { DIFFUSE_TEXTURE, NORMAL_TEXTURE };
 
@@ -34,11 +34,11 @@ struct VertexUniform {
 };
 
 struct FragmentUniform {
-  float intensity;
   Vec2i uv;
   Vec3f light;
   Vec3f normal;
-  Vec3f fragment_coord;
+  Vec3f eye;
+  Vec3f fragment;
   SDL_Surface* diffuse_texture;
 
   void SetVec2i(Vec2i& vec);
@@ -60,10 +60,10 @@ class Shader {
   Mat4 view_;
 };
 
-class BlinnPhongShader : public Shader {
+class PhongShader : public Shader {
  public:
-  BlinnPhongShader() = default;
-  virtual ~BlinnPhongShader() = default;
+  PhongShader() = default;
+  virtual ~PhongShader() = default;
 
   void Fragment(FragmentUniform& uniform, Uint32& pixel) override;
 };
