@@ -17,47 +17,34 @@
 
 namespace swr {
 
-enum Matrix { VIEWPORT, PROJECTION, VIEW };
+enum Matrix { MVP, MVP_IT };
 
-enum Vector { LIGHT, NORMAL, EYE, FRAGMENT };
+enum Vector { VERTEX, LIGHT };
 
-enum Texture { DIFFUSE_TEXTURE, NORMAL_TEXTURE };
-
-struct VertexUniform {
-  Vec3f vertex;
-  Mat4 viewport;
-  Mat4 projection;
-  Mat4 view;
-
-  void SetVec3f(Vec3f& vec);
-  void SetMat4(int name, Mat4& mat);
-};
-
-struct FragmentUniform {
-  Vec2i uv;
-  Vec3f light;
-  Vec3f normal;
-  Vec3f eye;
-  Vec3f fragment;
-  SDL_Surface* diffuse_texture;
-
-  void SetVec2i(Vec2i& vec);
-  void SetVec3f(int name, Vec3f& vec);
-  void SetTexture(int name, SDL_Surface* texture);
-};
+enum Texture { DIFFUSE_TEXTURE, NORMAL_TEXTURE, SPECULAR_TEXTURE };
 
 class Shader {
  public:
   Shader() = default;
   virtual ~Shader() = default;
 
-  virtual void Vertex(VertexUniform& uniform, Vec3f& position);
-  virtual void Fragment(FragmentUniform& uniform, Uint32& pixel);
+  void Shader::SetVec2i(Vec2i& vec);
+  void SetVec3f(int name, Vec3f& vec);
+  void SetMat4(int type, Mat4& mat);
+  void Shader::SetTexture(int name, SDL_Surface* texture);
+
+  virtual void Vertex(Vec4& position);
+  virtual void Fragment(Uint32& pixel);
 
  protected:
-  Mat4 viewport_;
-  Mat4 projection_;
-  Mat4 view_;
+  Vec2i uv_;
+  Vec3f light_;
+  Vec3f vertex_;
+  Mat4 mvp_;
+  Mat4 mvp_it_;
+  SDL_Surface* diffuse_texture_;
+  SDL_Surface* normal_texture_;
+  SDL_Surface* specular_texture_;
 };
 
 class PhongShader : public Shader {
@@ -65,7 +52,7 @@ class PhongShader : public Shader {
   PhongShader() = default;
   virtual ~PhongShader() = default;
 
-  void Fragment(FragmentUniform& uniform, Uint32& pixel) override;
+  void Fragment(Uint32& pixel) override;
 };
 
 Uint32 GetPixel(SDL_Surface* surface, int x, int y);

@@ -23,13 +23,19 @@ const int WIDTH = 800;
 const int HEIGHT = 600;
 const std::string TITLE("Software Renderer");
 #if _WIN32
-const std::string MODEL_FILENAME("../../obj/african_head.obj");
+const std::string MODEL_FILENAME("../../obj/diablo3_pose.obj");
 const std::string DIFFUSE_TEXTURE_FILENAME(
-    "../../obj/african_head_diffuse.tga");
+    "../../obj/diablo3_pose_diffuse.bmp");
+const std::string NORMAL_TEXTURE_FILENAME("../../obj/diablo3_pose_nm.bmp");
+const std::string SPECULAR_TEXTURE_FILENAME("../../obj/diablo3_pose_spec.bmp");
 #endif
 #if __APPLE__
-const std::string MODEL_FILENAME("../obj/african_head.obj");
-const std::string DIFFUSE_TEXTURE_FILENAME("../obj/african_head_diffuse.tga");
+const std::string MODEL_FILENAME("../../obj/diablo3_pose.obj");
+const std::string DIFFUSE_TEXTURE_FILENAME(
+    "../../obj/diablo3_pose_diffuse.bmp");
+
+const std::string NORMAL_TEXTURE_FILENAME("../../obj/diablo3_pose_nm.bmp");
+const std::string SPECULAR_TEXTURE_FILENAME("../../obj/diablo3_pose_spec.bmp");
 #endif
 
 class Renderer {
@@ -41,18 +47,15 @@ class Renderer {
   void Loop();
   void Terminate();
 
-  void LoadModel(const std::string& filename = MODEL_FILENAME);
-  void LoadDiffuseTexture(
-      const std::string& filename = DIFFUSE_TEXTURE_FILENAME);
+  void LoadModel(const std::string& filename);
+  void LoadTexture(int type, const std::string& filename);
 
   void CreateWindow(const std::string& title, const int& width,
                     const int& height);
   void CreateSurface();
 
-  void DrawTriangle(FragmentUniform& fragment_uniform,
-                    std::vector<Vec3f>& screen_coords,
-                    std::vector<Vec2f>& texture_coords,
-                    std::vector<Vec3f>& normal_coords);
+  void DrawTriangle(std::vector<Vec3f>& screen_coords,
+                    std::vector<Vec2f>& texture_coords);
   // Bresenham's line algorithm
   void DrawLine(int x0, int y0, int x1, int y1, Uint32 pixel);
 
@@ -68,6 +71,8 @@ class Renderer {
   Model* model_;
   std::vector<int>* zbuffer_;
   SDL_Surface* diffuse_texture_;
+  SDL_Surface* normal_texture_;
+  SDL_Surface* specular_texture_;
   Shader* shader_;
 };
 }  // namespace swr

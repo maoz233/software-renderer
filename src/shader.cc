@@ -23,71 +23,66 @@
 
 namespace swr {
 
-void VertexUniform::SetVec3f(Vec3f& vec) { this->vertex = vec; }
+void Shader::SetVec2i(Vec2i& vec) { this->uv_ = vec; }
 
-void VertexUniform::SetMat4(int name, Mat4& mat) {
+void Shader::SetVec3f(int name, Vec3f& vec) {
   switch (name) {
-    case Matrix::VIEWPORT:
-      this->viewport = mat;
+    case Vector::VERTEX:
+      this->vertex_ = vec;
       break;
-    case Matrix::PROJECTION:
-      this->projection = mat;
-      break;
-    case Matrix::VIEW:
-      this->view = mat;
-      break;
-    default:
-      break;
-  }
-}
-
-void FragmentUniform::SetVec2i(Vec2i& vec) { this->uv = vec; }
-
-void FragmentUniform::SetVec3f(int name, Vec3f& vec) {
-  switch (name) {
     case Vector::LIGHT:
-      this->light = vec;
-      break;
-    case Vector::NORMAL:
-      this->normal = vec;
-      break;
-    case Vector::EYE:
-      this->eye = vec;
-      break;
-    case Vector::FRAGMENT:
-      this->fragment = vec;
+      this->light_ = vec;
       break;
     default:
       break;
   }
 }
 
-void FragmentUniform::SetTexture(int name, SDL_Surface* texture) {
+void Shader::SetMat4(int name, Mat4& mat) {
+  switch (name) {
+    case Matrix::MVP:
+      this->mvp_ = mat;
+      break;
+    case Matrix::MVP_IT:
+      this->mvp_it_ = mat;
+      break;
+    default:
+      break;
+  }
+}
+
+void Shader::SetTexture(int name, SDL_Surface* texture) {
   switch (name) {
     case Texture::DIFFUSE_TEXTURE:
-      this->diffuse_texture = texture;
+      this->diffuse_texture_ = texture;
+      break;
+    case Texture::NORMAL_TEXTURE:
+      this->normal_texture_ = texture;
+      break;
+    case Texture::SPECULAR_TEXTURE:
+      this->specular_texture_ = texture;
       break;
     default:
       break;
   }
 }
 
-void Shader::Vertex(VertexUniform& uniform, Vec3f& position) {
+void Shader::Vertex(Vec4& position) {
   Vec4 homo_vertex{};
-  homo_vertex[0][0] = uniform.vertex.x;
-  homo_vertex[1][0] = uniform.vertex.y;
-  homo_vertex[2][0] = uniform.vertex.z;
+  homo_vertex[0][0] = this->vertex_.x;
+  homo_vertex[1][0] = this->vertex_.y;
+  homo_vertex[2][0] = this->vertex_.z;
   homo_vertex[3][0] = 1.f;
 
-  Vec4 v = uniform.viewport * uniform.projection * uniform.view * homo_vertex;
-  position = Vec3f(v[0][0] / v[3][0], v[1][0] / v[3][0], v[2][0] / v[3][0]);
+  Vec4 v = this->mvp_ * homo_vertex;
+
+  position = v;
 }
 
-// Flat Shading
-void Shader::Fragment(FragmentUniform& uniform, Uint32& pixel) {
+void Shader::Fragment(Uint32& pixel) {
   // Sampling pixel from diffuse texture
-  Uint32 p = GetPixel(uniform.diffuse_texture, uniform.uv.u, uniform.uv.v);
-  SDL_PixelFormat* format = uniform.diffuse_texture->format;
+  Uint32 p = GetPixel(this->diffuse_texture_, this->uv_.u, this->uv_.v);
+  SDL_PixelFormat* format = this->diffuse_texture_->format;
 
   Uint8 R = static_cast<Uint8>(
       (((p & format->Rmask) >> format->Rshift) << format->Rloss));
@@ -100,23 +95,44 @@ void Shader::Fragment(FragmentUniform& uniform, Uint32& pixel) {
 }
 
 // Phong Shading
-void PhongShader::Fragment(FragmentUniform& uniform, Uint32& pixel) {
+void PhongShader::Fragment(Uint32& pixel) {
   // Ambient light intensity
   float ambient = .05f;
+
   // Diffuse light intensity
+  Uint32 pixel_normal =
+      GetPixel(this->normal_texture_, this->uv_.u, this->uv_.v);
+  Uint8 normal_r = 0;
+  Uint8 normal_g = 0;
+  Uint8 normal_b = 0;
+  SDL_GetRGB(pixel_normal, this->normal_texture_->format, &normal_r, &normal_g,
+             &normal_b);
+  Vec4 homo_normal{};
+  homo_normal[0][0] = static_cast<float>(normal_r);
+  homo_normal[1][0] = static_cast<float>(normal_g);
+  homo_normal[2][0] = static_cast<float>(normal_b);
+  homo_normal[3][0] = 0.f;
+  Vec4 n = this->mvp_it_ * homo_normal;
+  Vec3f normal{n[0][0] / n[3][0], n[1][0] / n[3][0], n[2][0] / n[3][0]};
   float diff =
-      std::max(uniform.normal.Normalize() * uniform.light.Normalize(), 0.f);
+      std::max(0.f, std::abs(normal.Normalize() * this->light_.Normalize()));
+
   // Specular light intensity
-  Vec3f view_dir = (uniform.fragment - uniform.eye).Normalize();
-  Vec3f negative_light{-uniform.light.x, -uniform.light.y, -uniform.light.z};
-  Vec3f reflect_dir =
-      Reflect(negative_light.Normalize(), uniform.normal.Normalize());
-  float spec = static_cast<float>(
-      .5f * std::pow(std::max(view_dir * reflect_dir, 0.f), 32));
+  Uint32 pixel_specular =
+      GetPixel(this->normal_texture_, this->uv_.u, this->uv_.v);
+  Uint8 specular_r = 0;
+  Uint8 specular_g = 0;
+  Uint8 specular_b = 0;
+  SDL_GetRGB(pixel_specular, this->normal_texture_->format, &specular_r,
+             &specular_g, &specular_b);
+  Vec3f r = Reflect(this->light_, normal).Normalize();
+  float s =
+      std::max(0.f, static_cast<float>(specular_r + specular_g + specular_b));
+  float spec = std::pow(std::max(r.z, 0.f), s);
 
   // Sampling from diffuse texture
-  Uint32 p = GetPixel(uniform.diffuse_texture, uniform.uv.u, uniform.uv.v);
-  SDL_PixelFormat* format = uniform.diffuse_texture->format;
+  Uint32 p = GetPixel(this->diffuse_texture_, this->uv_.u, this->uv_.v);
+  SDL_PixelFormat* format = this->diffuse_texture_->format;
 
   // R, G, B channels
   Uint8 R = static_cast<Uint8>(
@@ -164,5 +180,4 @@ Uint32 GetPixel(SDL_Surface* surface, int x, int y) {
       return 0; /* shouldn't happen, but avoids warnings */
   }
 }
-
 }  // namespace swr

@@ -48,8 +48,10 @@ void Renderer::Init() {
   CreateSurface();
   // Initialize zbuffer
   this->zbuffer_ = new std::vector<int>(HEIGHT * WIDTH, INT_MIN);
-  LoadModel();
-  LoadDiffuseTexture();
+  LoadModel(MODEL_FILENAME);
+  LoadTexture(Texture::DIFFUSE_TEXTURE, DIFFUSE_TEXTURE_FILENAME);
+  LoadTexture(Texture::NORMAL_TEXTURE, NORMAL_TEXTURE_FILENAME);
+  LoadTexture(Texture::SPECULAR_TEXTURE, SPECULAR_TEXTURE_FILENAME);
 }
 
 void Renderer::Loop() {
@@ -71,19 +73,20 @@ void Renderer::Loop() {
       Viewport(static_cast<float>(WIDTH), static_cast<float>(HEIGHT));
 
   // Shader
-  this->shader_ = new Shader();
+  this->shader_ = new PhongShader();
 
-  // Uniform data for vertex shader
-  VertexUniform vertex_uniform{};
-  vertex_uniform.SetMat4(Matrix::VIEWPORT, viewport);
-  vertex_uniform.SetMat4(Matrix::PROJECTION, projection);
-  vertex_uniform.SetMat4(Matrix::VIEW, view);
+  // Uniform data for shader
+  this->shader_->SetVec3f(Vector::LIGHT, light_dir);
 
-  // Uniform data for fragment shader
-  FragmentUniform fragment_uniform{};
-  fragment_uniform.SetVec3f(Vector::LIGHT, light_dir);
-  fragment_uniform.SetVec3f(Vector::EYE, eye);
-  fragment_uniform.SetTexture(Texture::DIFFUSE_TEXTURE, this->diffuse_texture_);
+  Mat4 mvp = projection * view;
+  this->shader_->SetMat4(Matrix::MVP, mvp);
+
+  Mat4 mvp_it = mvp.Inverse().Transpose();
+  this->shader_->SetMat4(Matrix::MVP_IT, mvp_it);
+
+  this->shader_->SetTexture(Texture::DIFFUSE_TEXTURE, this->diffuse_texture_);
+  this->shader_->SetTexture(Texture::NORMAL_TEXTURE, this->normal_texture_);
+  this->shader_->SetTexture(Texture::SPECULAR_TEXTURE, this->specular_texture_);
 
   bool line_is_primitive = false;
   SDL_Event e;
@@ -116,10 +119,16 @@ void Renderer::Loop() {
 
       // Transformation
       std::vector<Vec3f> screen_coords(3);
+      std::vector<Vec3f> vertex_coords(3);
       for (int j = 0; j < 3; ++j) {
         Vec3f vertex = this->model_->GetVertex(face[j]);
-        vertex_uniform.SetVec3f(vertex);
-        this->shader_->Vertex(vertex_uniform, screen_coords[j]);
+        vertex_coords.push_back(vertex);
+        this->shader_->SetVec3f(Vector::VERTEX, vertex);
+        Vec4 postion{};
+        this->shader_->Vertex(postion);
+        Vec4 v = viewport * postion;
+        screen_coords[j] =
+            Vec3f(v[0][0] / v[3][0], v[1][0] / v[3][0], v[2][0] / v[3][0]);
       }
 
       if (line_is_primitive) {
@@ -132,16 +141,13 @@ void Renderer::Loop() {
           DrawLine(x0, y0, x1, y1, pixel);
         }
       } else {
-        std::vector<Vec3f> normal_coords(3);
         std::vector<Vec2f> texture_coords(3);
         for (int j = 0; j < 3; ++j) {
-          normal_coords[j] = this->model_->GetNormalCoords(normal_indices[j]);
           texture_coords[j] =
               this->model_->GetTextureCoords(texture_indices[j]);
         }
 
-        DrawTriangle(fragment_uniform, screen_coords, texture_coords,
-                     normal_coords);
+        DrawTriangle(screen_coords, texture_coords);
       }
     }
 
@@ -181,14 +187,28 @@ void Renderer::LoadModel(const std::string& filename) {
   }
 }
 
-void Renderer::LoadDiffuseTexture(const std::string& filename) {
-  std::clog << "----- Renderer::LoadDiffuseTexture -----" << std::endl;
+void Renderer::LoadTexture(int type, const std::string& filename) {
+  std::clog << "----- Renderer::LoadTexture -----" << std::endl;
 
   SDL_Surface* texture = IMG_Load(filename.c_str());
-  this->diffuse_texture_ =
-      SDL_ConvertSurface(texture, this->surface_->format, 0);
-  if (!this->diffuse_texture_) {
-    throw std::runtime_error("----- Error::LOAD_DIFFUSE_TEXTURE_FAILURE -----");
+  auto format = this->surface_->format;
+
+  if (!texture) {
+    throw std::runtime_error("----- Error::LOAD_TEXTURE_FAILURE -----");
+  }
+
+  switch (type) {
+    case Texture::DIFFUSE_TEXTURE:
+      this->diffuse_texture_ = SDL_ConvertSurface(texture, format, 0);
+      break;
+    case Texture::NORMAL_TEXTURE:
+      this->normal_texture_ = SDL_ConvertSurface(texture, format, 0);
+      break;
+    case Texture::SPECULAR_TEXTURE:
+      this->specular_texture_ = SDL_ConvertSurface(texture, format, 0);
+      break;
+    default:
+      break;
   }
 }
 
@@ -215,10 +235,8 @@ void Renderer::CreateSurface() {
   }
 }
 
-void Renderer::DrawTriangle(FragmentUniform& fragment_uniform,
-                            std::vector<Vec3f>& screen_coords,
-                            std::vector<Vec2f>& texture_coords,
-                            std::vector<Vec3f>& normal_coords) {
+void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
+                            std::vector<Vec2f>& texture_coords) {
   // Bounding Box
   int x_min = static_cast<int>(std::round(std::min(
       std::min(screen_coords[0].x, screen_coords[1].x), screen_coords[2].x)));
@@ -256,14 +274,6 @@ void Renderer::DrawTriangle(FragmentUniform& fragment_uniform,
       // Update z index
       (*(this->zbuffer_))[x + y * WIDTH] = z;
 
-      // TO-DO: interpolated normal vector
-      Vec3f normal = normal_coords[0] + normal_coords[1] + normal_coords[2];
-      fragment_uniform.SetVec3f(Vector::NORMAL, normal);
-
-      // TO-DO: interpolated fragment coordinates
-      Vec3f fragment{};
-      fragment_uniform.SetVec3f(Vector::FRAGMENT, fragment);
-
       // Interpolated texture coordinates
       int u = static_cast<int>(
           std::round((texture_coords[0].u * bc.x + texture_coords[1].u * bc.y +
@@ -274,10 +284,10 @@ void Renderer::DrawTriangle(FragmentUniform& fragment_uniform,
                       texture_coords[2].v * bc.z) *
                      this->diffuse_texture_->h));
       Vec2i uv{u, v};
-      fragment_uniform.SetVec2i(uv);
+      this->shader_->SetVec2i(uv);
 
       Uint32 pixel = 0;
-      this->shader_->Fragment(fragment_uniform, pixel);
+      this->shader_->Fragment(pixel);
 
       SetPixel(this->surface_, x, y, pixel);
     }
