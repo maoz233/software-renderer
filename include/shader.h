@@ -28,10 +28,10 @@ class Shader {
   Shader() = default;
   virtual ~Shader() = default;
 
-  void Shader::SetVec2i(Vec2i& vec);
+  void SetVec2i(Vec2i& vec);
   void SetVec3f(int name, Vec3f& vec);
   void SetMat4(int type, Mat4& mat);
-  void Shader::SetTexture(int name, SDL_Surface* texture);
+  void SetTexture(int name, SDL_Surface* texture);
 
   virtual void Vertex(Vec4& position);
   virtual void Fragment(Uint32& pixel);
