@@ -23,18 +23,22 @@ const int WIDTH = 800;
 const int HEIGHT = 600;
 const std::string TITLE("Software Renderer");
 #if _WIN32
-const std::string MODEL_FILENAME("../../obj/diablo3_pose.obj");
+const std::string MODEL_FILENAME("../../obj/diablo3/diablo3_pose.obj");
 const std::string DIFFUSE_TEXTURE_FILENAME(
-    "../../obj/diablo3_pose_diffuse.tga");
-const std::string NORMAL_TEXTURE_FILENAME("../../obj/diablo3_pose_nm.tga");
-const std::string SPECULAR_TEXTURE_FILENAME("../../obj/diablo3_pose_spec.tga");
+    "../../obj/diablo3/diablo3_pose_diffuse.tga");
+const std::string NORMAL_TEXTURE_FILENAME(
+    "../../obj/diablo3/diablo3_pose_nm.tga");
+const std::string SPECULAR_TEXTURE_FILENAME(
+    "../../obj/diablo3/diablo3_pose_spec.tga");
 #endif
 #if __APPLE__
-const std::string MODEL_FILENAME("../obj/diablo3_pose.obj");
-const std::string DIFFUSE_TEXTURE_FILENAME("../obj/diablo3_pose_diffuse.tga");
+const std::string MODEL_FILENAME("../obj/diablo3/diablo3_pose.obj");
+const std::string DIFFUSE_TEXTURE_FILENAME(
+    "../obj/diablo3/diablo3_pose_diffuse.tga");
 
-const std::string NORMAL_TEXTURE_FILENAME("../obj/diablo3_pose_nm.tga");
-const std::string SPECULAR_TEXTURE_FILENAME("../obj/diablo3_pose_spec.tga");
+const std::string NORMAL_TEXTURE_FILENAME("../obj/diablo3/diablo3_pose_nm.tga");
+const std::string SPECULAR_TEXTURE_FILENAME(
+    "../obj/diablo3/diablo3_pose_spec.tga");
 #endif
 
 class Renderer {
