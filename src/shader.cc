@@ -67,14 +67,10 @@ void Shader::SetTexture(int name, SDL_Surface* texture) {
   }
 }
 
-void Shader::Vertex(Vec4& position) {
-  Vec4 homo_vertex{};
-  homo_vertex[0][0] = this->vertex_.x;
-  homo_vertex[1][0] = this->vertex_.y;
-  homo_vertex[2][0] = this->vertex_.z;
-  homo_vertex[3][0] = 1.f;
+void Shader::Vertex(Vec4f& position) {
+  Vec4f homo_vertex{this->vertex_.x, this->vertex_.y, this->vertex_.z, 1.f};
 
-  Vec4 v = this->mvp_ * homo_vertex;
+  Vec4f v = this->mvp_ * homo_vertex;
 
   position = v;
 }
@@ -107,15 +103,16 @@ void PhongShader::Fragment(Uint32& pixel) {
   Uint8 normal_b = 0;
   SDL_GetRGB(pixel_normal, this->normal_texture_->format, &normal_r, &normal_g,
              &normal_b);
-  Vec4 homo_normal{};
-  homo_normal[0][0] = static_cast<float>(normal_r);
-  homo_normal[1][0] = static_cast<float>(normal_g);
-  homo_normal[2][0] = static_cast<float>(normal_b);
-  homo_normal[3][0] = 0.f;
-  Vec4 n = this->mvp_it_ * homo_normal;
-  Vec3f normal{n[0][0] / n[3][0], n[1][0] / n[3][0], n[2][0] / n[3][0]};
-  float diff =
-      std::max(0.f, std::abs(normal.Normalize() * this->light_.Normalize()));
+
+  Vec4f normal{static_cast<float>(normal_r), static_cast<float>(normal_g),
+               static_cast<float>(normal_b), 0.f};
+  Vec4f n = this->mvp_it_ * normal;
+  Vec4f light{static_cast<float>(this->light_.x),
+              static_cast<float>(this->light_.y),
+              static_cast<float>(this->light_.z), 0.f};
+  Vec4f l = this->mvp_ * light;
+
+  float diff = std::max(0.f, normal.Normalize() * light.Normalize());
 
   // Specular light intensity
   Uint32 pixel_specular =
@@ -125,9 +122,8 @@ void PhongShader::Fragment(Uint32& pixel) {
   Uint8 specular_b = 0;
   SDL_GetRGB(pixel_specular, this->normal_texture_->format, &specular_r,
              &specular_g, &specular_b);
-  Vec3f r = Reflect(this->light_, normal).Normalize();
-  float s =
-      std::max(0.f, static_cast<float>(specular_r + specular_g + specular_b));
+  Vec4f r = Reflect(l, n).Normalize();
+  float s = std::max(0.f, static_cast<float>(specular_r));
   float spec = std::pow(std::max(r.z, 0.f), s);
 
   // Sampling from diffuse texture
@@ -180,4 +176,9 @@ Uint32 GetPixel(SDL_Surface* surface, int x, int y) {
       return 0; /* shouldn't happen, but avoids warnings */
   }
 }
+
+Vec4f Reflect(Vec4f& v, Vec4f& normal) {
+  return normal * 2.f * (v * normal) - v;
+}
+
 }  // namespace swr

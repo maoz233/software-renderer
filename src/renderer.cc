@@ -57,7 +57,7 @@ void Renderer::Init() {
 void Renderer::Loop() {
   std::clog << "----- Renderer::Loop -----" << std::endl;
 
-  Vec3f light_dir(0.f, 0.f, -1.f);
+  Vec3f light_dir(0.f, 0.f, 1.f);
 
   Vec3f eye(0.f, 0.f, 3.f);
   Vec3f center(0.0f, 0.0f, 0.f);
@@ -124,11 +124,10 @@ void Renderer::Loop() {
         Vec3f vertex = this->model_->GetVertex(face[j]);
         vertex_coords.push_back(vertex);
         this->shader_->SetVec3f(Vector::VERTEX, vertex);
-        Vec4 postion{};
+        Vec4f postion{};
         this->shader_->Vertex(postion);
-        Vec4 v = viewport * postion;
-        screen_coords[j] =
-            Vec3f(v[0][0] / v[3][0], v[1][0] / v[3][0], v[2][0] / v[3][0]);
+        Vec4f v = viewport * postion;
+        screen_coords[j] = Vec3f(v[0] / v[3], v[1] / v[3], v[2] / v[3]);
       }
 
       if (line_is_primitive) {

@@ -131,8 +131,6 @@ struct Vec3 {
   inline float Norm();
   // Normalize
   inline Vec3<T>& Normalize(T l = 1);
-  // Reflect
-  inline Vec3<T> Reflect(Vec3<T>& v, Vec3<T>& normal);
 
   template <typename>
   friend std::ostream& operator<<(std::ostream& out, Vec3<T>& v);
@@ -198,11 +196,6 @@ Vec3<T>& Vec3<T>::Normalize(T l) {
 }
 
 template <typename T>
-Vec3<T> Reflect(Vec3<T>& v, Vec3<T>& normal) {
-  return v - normal * 2 * (v * normal);
-}
-
-template <typename T>
 std::ostream& operator<<(std::ostream& out, Vec3<T>& v) {
   out << "(" << v.x << ", " << v.y << ", " << v.z << ")\n";
 
@@ -211,6 +204,102 @@ std::ostream& operator<<(std::ostream& out, Vec3<T>& v) {
 
 typedef Vec3<int> Vec3i;
 typedef Vec3<float> Vec3f;
+
+template <typename T>
+struct Vec4 {
+  union {
+    struct {
+      T x, y, z, w;
+    };
+    T raw[4];
+  };
+
+  Vec4();
+  Vec4(T x_, T y_, T z_, T w_);
+
+  inline Vec4<T> operator+(const Vec4<T>& v) const;
+  inline Vec4<T> operator-(const Vec4<T>& v) const;
+  inline Vec4<T> operator*(float f) const;
+#if _WIN32
+  inline void operator=(const Vec4<T>& v);
+#endif
+  inline T& operator[](int index);
+  // Dot product
+  inline T operator*(const Vec4<T>& v) const;
+
+  // Norm
+  inline float Norm();
+  // Normalize
+  inline Vec4<T>& Normalize(T l = 1);
+
+  template <typename>
+  friend std::ostream& operator<<(std::ostream& out, Vec4<T>& v);
+};
+
+template <typename T>
+Vec4<T>::Vec4() : x(0), y(0), z(0), w(0) {}
+
+template <typename T>
+Vec4<T>::Vec4(T x_, T y_, T z_, T w_) : x(x_), y(y_), z(z_), w(w_) {}
+
+template <typename T>
+Vec4<T> Vec4<T>::operator+(const Vec4<T>& v) const {
+  return Vec4<T>(x + v.x, y + v.y, z + v.z, w + v.w);
+}
+
+template <typename T>
+Vec4<T> Vec4<T>::operator-(const Vec4<T>& v) const {
+  return Vec4<T>(x - v.x, y - v.y, z - v.z, w - v.w);
+}
+
+#if _WIN32
+template <typename T>
+void Vec4<T>::operator=(const Vec4<T>& v) {
+  x = v.x;
+  y = v.y;
+  z = v.z;
+  w = v.w;
+}
+#endif
+
+template <typename T>
+T& Vec4<T>::operator[](int index) {
+  assert(index >= 0 && index < 4);
+
+  return this->raw[index];
+}
+
+template <typename T>
+Vec4<T> Vec4<T>::operator*(float f) const {
+  return Vec4<T>(x * f, y * f, z * f, w * f);
+}
+
+template <typename T>
+T Vec4<T>::operator*(const Vec4<T>& v) const {
+  return x * v.x + y * v.y + z * v.z + w * v.w;
+}
+
+template <typename T>
+float Vec4<T>::Norm() {
+  return std::sqrt(x * x + y * y + z * z + w * w);
+}
+
+template <typename T>
+Vec4<T>& Vec4<T>::Normalize(T l) {
+  *this = *this * (l / Norm());
+
+  return *this;
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& out, Vec4<T>& v) {
+  out << "(" << v.x << ", " << v.y << ", " << v.z << ", " << v.w << ")\n";
+
+  return out;
+}
+
+typedef Vec4<int> Vec4i;
+typedef Vec4<float> Vec4f;
 
 template <int M, int N>
 struct Mat {
@@ -226,6 +315,7 @@ struct Mat {
 #endif
 
   std::vector<float>& operator[](int index);
+  Vec4f operator*(Vec4f& v);
   template <int O>
   Mat<M, O> operator*(Mat<N, O> mat) const;
 
@@ -275,6 +365,21 @@ std::vector<float>& Mat<M, N>::operator[](int index) {
   assert(index >= 0 && index < M);
 
   return this->m[index];
+}
+
+template <int M, int N>
+Vec4f Mat<M, N>::operator*(Vec4f& v) {
+  assert(M == 4 && N == 4);
+
+  Vec4f vec{};
+
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
+      vec[i] += this->m[i][j] * v[j];
+    }
+  }
+
+  return vec;
 }
 
 template <int M, int N>
@@ -391,7 +496,6 @@ Mat<M, N> Mat<M, N>::Identity() {
 }
 
 typedef Mat<4, 4> Mat4;
-typedef Mat<4, 1> Vec4;
 
 Mat4 LookAt(Vec3f& eye, Vec3f& center);
 

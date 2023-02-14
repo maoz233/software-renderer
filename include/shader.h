@@ -33,7 +33,7 @@ class Shader {
   void SetMat4(int type, Mat4& mat);
   void SetTexture(int name, SDL_Surface* texture);
 
-  virtual void Vertex(Vec4& position);
+  virtual void Vertex(Vec4f& position);
   virtual void Fragment(Uint32& pixel);
 
  protected:
@@ -56,6 +56,8 @@ class PhongShader : public Shader {
 };
 
 Uint32 GetPixel(SDL_Surface* surface, int x, int y);
+
+Vec4f Reflect(Vec4f& v, Vec4f& normal);
 
 }  // namespace swr
 

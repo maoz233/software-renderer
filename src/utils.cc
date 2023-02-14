@@ -13,12 +13,9 @@
 namespace swr {
 Mat4 LookAt(Vec3f& eye, Vec3f& center) {
   Vec3f world_up(0.f, 1.f, 0.f);
-  Vec3f dir = center - eye;
-  dir = dir.Normalize();
+  Vec3f dir = (center - eye).Normalize();
   Vec3f right = dir ^ world_up;
-  right = right.Normalize();
   Vec3f up = right ^ dir;
-  up = up.Normalize();
 
   Mat4 view_rotate = Mat4::Identity();
   view_rotate[0][0] = right.x;
