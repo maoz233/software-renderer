@@ -10,3 +10,7 @@
 
 ### Phong Shading
 ![frame](https://raw.githubusercontent.com/maoz233/software-renderer/main/images/phong.png)
+
+
+### Normal mapping
+![frame](https://raw.githubusercontent.com/maoz233/software-renderer/main/images/normal_mapping.png)
