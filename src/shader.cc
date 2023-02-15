@@ -193,8 +193,9 @@ void NormalMappingShader::Fragment(Uint32& pixel) {
                      .Normalize();
 
   // TBN matrix
+  Vec3f T = this->tangent_.Normalize();
   Vec3f N = this->normal_.Normalize();
-  Vec3f T = (T - N * (T * N)).Normalize();
+  T = (T - N * (T * N)).Normalize();
   Vec3f B_ = N ^ T;
 
   Mat3 TBN{};
