@@ -9,4 +9,4 @@
 ![frame](https://raw.githubusercontent.com/maoz233/software-renderer/main/images/Diffuse.png)
 
 ### Phong Shading
-![frame](https://raw.githubusercontent.com/maoz233/software-renderer/main/images/PhongShading.png)
+![frame](https://raw.githubusercontent.com/maoz233/software-renderer/main/images/phong.png)
