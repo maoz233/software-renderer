@@ -234,7 +234,7 @@ void NormalMappingShader::Fragment(Uint32& pixel) {
 
   // Specular light intensity
   Vec3f reflect = Reflect(light_dir, normal).Normalize();
-  Vec3f view_dir = (this->eye_ - this->fragment_).Normalize();
+  Vec3f view_dir = (view_pos - fragment_pos).Normalize();
   float spec = std::pow(std::max(view_dir * reflect, 0.f), 32.f);
 
   Uint32 pixel_specular =
