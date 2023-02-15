@@ -100,6 +100,9 @@ std::ostream& operator<<(std::ostream& out, Vec2<T>& v) {
 typedef Vec2<int> Vec2i;
 typedef Vec2<float> Vec2f;
 
+template <typename>
+struct Vec4;
+
 template <typename T>
 struct Vec3 {
   union {
@@ -114,6 +117,7 @@ struct Vec3 {
 
   Vec3();
   Vec3(T x_, T y_, T z_);
+  Vec3(Vec4<T> v);
 
   // Cross product
   inline Vec3<T> operator^(const Vec3<T>& v) const;
@@ -141,6 +145,9 @@ Vec3<T>::Vec3() : x(0), y(0), z(0) {}
 
 template <typename T>
 Vec3<T>::Vec3(T x_, T y_, T z_) : x(x_), y(y_), z(z_) {}
+
+template <typename T>
+Vec3<T>::Vec3(Vec4<T> v) : x(v.x), y(v.y), z(v.z) {}
 
 template <typename T>
 Vec3<T> Vec3<T>::operator^(const Vec3<T>& v) const {
@@ -216,6 +223,7 @@ struct Vec4 {
 
   Vec4();
   Vec4(T x_, T y_, T z_, T w_);
+  Vec4(Vec3<T> v, T w_);
 
   inline Vec4<T> operator+(const Vec4<T>& v) const;
   inline Vec4<T> operator-(const Vec4<T>& v) const;
@@ -224,13 +232,6 @@ struct Vec4 {
   inline void operator=(const Vec4<T>& v);
 #endif
   inline T& operator[](int index);
-  // Dot product
-  inline T operator*(const Vec4<T>& v) const;
-
-  // Norm
-  inline float Norm();
-  // Normalize
-  inline Vec4<T>& Normalize(T l = 1);
 
   template <typename>
   friend std::ostream& operator<<(std::ostream& out, Vec4<T>& v);
@@ -241,6 +242,9 @@ Vec4<T>::Vec4() : x(0), y(0), z(0), w(0) {}
 
 template <typename T>
 Vec4<T>::Vec4(T x_, T y_, T z_, T w_) : x(x_), y(y_), z(z_), w(w_) {}
+
+template <typename T>
+Vec4<T>::Vec4(Vec3<T> v, T w_) : x(v.x), y(v.y), z(v.z), w(w_) {}
 
 template <typename T>
 Vec4<T> Vec4<T>::operator+(const Vec4<T>& v) const {
@@ -272,23 +276,6 @@ T& Vec4<T>::operator[](int index) {
 template <typename T>
 Vec4<T> Vec4<T>::operator*(float f) const {
   return Vec4<T>(x * f, y * f, z * f, w * f);
-}
-
-template <typename T>
-T Vec4<T>::operator*(const Vec4<T>& v) const {
-  return x * v.x + y * v.y + z * v.z + w * v.w;
-}
-
-template <typename T>
-float Vec4<T>::Norm() {
-  return std::sqrt(x * x + y * y + z * z + w * w);
-}
-
-template <typename T>
-Vec4<T>& Vec4<T>::Normalize(T l) {
-  *this = *this * (l / Norm());
-
-  return *this;
 }
 
 template <typename T>

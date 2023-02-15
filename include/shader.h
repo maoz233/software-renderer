@@ -17,9 +17,9 @@
 
 namespace swr {
 
-enum Matrix { MVP, MVP_IT };
+enum Matrix { MVP };
 
-enum Vector { VERTEX, LIGHT };
+enum Vector { VERTEX, FRAGMENT, LIGHT, EYE };
 
 enum Texture { DIFFUSE_TEXTURE, NORMAL_TEXTURE, SPECULAR_TEXTURE };
 
@@ -33,15 +33,16 @@ class Shader {
   void SetMat4(int type, Mat4& mat);
   void SetTexture(int name, SDL_Surface* texture);
 
-  virtual void Vertex(Vec4f& position);
+  virtual void Vertex(Vec3f& position);
   virtual void Fragment(Uint32& pixel);
 
  protected:
   Vec2i uv_;
+  Vec3f eye_;
   Vec3f light_;
+  Vec3f fragment_;
   Vec3f vertex_;
   Mat4 mvp_;
-  Mat4 mvp_it_;
   SDL_Surface* diffuse_texture_;
   SDL_Surface* normal_texture_;
   SDL_Surface* specular_texture_;
@@ -57,7 +58,7 @@ class PhongShader : public Shader {
 
 Uint32 GetPixel(SDL_Surface* surface, int x, int y);
 
-Vec4f Reflect(Vec4f& v, Vec4f& normal);
+Vec3f Reflect(Vec3f& v, Vec3f& normal);
 
 }  // namespace swr
 

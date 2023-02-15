@@ -30,8 +30,14 @@ void Shader::SetVec3f(int name, Vec3f& vec) {
     case Vector::VERTEX:
       this->vertex_ = vec;
       break;
+    case Vector::FRAGMENT:
+      this->fragment_ = vec;
+      break;
     case Vector::LIGHT:
       this->light_ = vec;
+      break;
+    case Vector::EYE:
+      this->eye_ = vec;
       break;
     default:
       break;
@@ -42,9 +48,6 @@ void Shader::SetMat4(int name, Mat4& mat) {
   switch (name) {
     case Matrix::MVP:
       this->mvp_ = mat;
-      break;
-    case Matrix::MVP_IT:
-      this->mvp_it_ = mat;
       break;
     default:
       break;
@@ -67,25 +70,40 @@ void Shader::SetTexture(int name, SDL_Surface* texture) {
   }
 }
 
-void Shader::Vertex(Vec4f& position) {
-  Vec4f homo_vertex{this->vertex_.x, this->vertex_.y, this->vertex_.z, 1.f};
-
+void Shader::Vertex(Vec3f& position) {
+  Vec4f homo_vertex{this->vertex_, 1.f};
   Vec4f v = this->mvp_ * homo_vertex;
 
-  position = v;
+  position = Vec3f(v[0] / v[3], v[1] / v[3], v[2] / v[3]);
 }
 
 void Shader::Fragment(Uint32& pixel) {
+  // Diffuse light intensity
+  Uint32 pixel_normal =
+      GetPixel(this->normal_texture_, this->uv_.u, this->uv_.v);
+  Uint8 normal_r = 0;
+  Uint8 normal_g = 0;
+  Uint8 normal_b = 0;
+  SDL_GetRGB(pixel_normal, this->normal_texture_->format, &normal_r, &normal_g,
+             &normal_b);
+
+  Vec3f normal{static_cast<float>(normal_r), static_cast<float>(normal_g),
+               static_cast<float>(normal_b)};
+
+  Vec3f light_dir{this->light_ - this->fragment_};
+
+  float diff = std::max(0.f, normal.Normalize() * light_dir.Normalize());
+
   // Sampling pixel from diffuse texture
   Uint32 p = GetPixel(this->diffuse_texture_, this->uv_.u, this->uv_.v);
   SDL_PixelFormat* format = this->diffuse_texture_->format;
 
   Uint8 R = static_cast<Uint8>(
-      (((p & format->Rmask) >> format->Rshift) << format->Rloss));
+      (((p & format->Rmask) >> format->Rshift) << format->Rloss) * diff);
   Uint8 G = static_cast<Uint8>(
-      (((p & format->Gmask) >> format->Gshift) << format->Gloss));
+      (((p & format->Gmask) >> format->Gshift) << format->Gloss) * diff);
   Uint8 B = static_cast<Uint8>(
-      (((p & format->Bmask) >> format->Bshift) << format->Bloss));
+      (((p & format->Bmask) >> format->Bshift) << format->Bloss) * diff);
 
   pixel = SDL_MapRGB(format, R, G, B);
 }
@@ -104,42 +122,39 @@ void PhongShader::Fragment(Uint32& pixel) {
   SDL_GetRGB(pixel_normal, this->normal_texture_->format, &normal_r, &normal_g,
              &normal_b);
 
-  Vec4f normal{static_cast<float>(normal_r), static_cast<float>(normal_g),
-               static_cast<float>(normal_b), 0.f};
-  Vec4f n = this->mvp_it_ * normal;
-  Vec4f light{static_cast<float>(this->light_.x),
-              static_cast<float>(this->light_.y),
-              static_cast<float>(this->light_.z), 0.f};
-  Vec4f l = this->mvp_ * light;
+  Vec3f normal =
+      Vec3f{static_cast<float>(normal_r), static_cast<float>(normal_g),
+            static_cast<float>(normal_b)}
+          .Normalize();
 
-  float diff = std::max(0.f, normal.Normalize() * light.Normalize());
+  Vec3f light_dir = (this->light_ - this->fragment_).Normalize();
+
+  float diff = std::max(0.f, normal * light_dir);
 
   // Specular light intensity
   Uint32 pixel_specular =
       GetPixel(this->normal_texture_, this->uv_.u, this->uv_.v);
   Uint8 specular_r = 0;
-  Uint8 specular_g = 0;
-  Uint8 specular_b = 0;
-  SDL_GetRGB(pixel_specular, this->normal_texture_->format, &specular_r,
-             &specular_g, &specular_b);
-  Vec4f r = Reflect(l, n).Normalize();
+  Uint8 trash = 0;
+  SDL_GetRGB(pixel_specular, this->normal_texture_->format, &specular_r, &trash,
+             &trash);
   float s = std::max(0.f, static_cast<float>(specular_r));
-  float spec = std::pow(std::max(r.z, 0.f), s);
+  Vec3f reflect = Reflect(light_dir, normal).Normalize();
+  Vec3f view_dir = (this->eye_ - this->fragment_).Normalize();
+  float spec = std::pow(std::max(view_dir * reflect, 0.f), s);
 
   // Sampling from diffuse texture
   Uint32 p = GetPixel(this->diffuse_texture_, this->uv_.u, this->uv_.v);
   SDL_PixelFormat* format = this->diffuse_texture_->format;
 
+  float intensity = ambient + diff + spec;
   // R, G, B channels
   Uint8 R = static_cast<Uint8>(
-      (((p & format->Rmask) >> format->Rshift) << format->Rloss) *
-      (ambient + diff + spec));
+      (((p & format->Rmask) >> format->Rshift) << format->Rloss) * intensity);
   Uint8 G = static_cast<Uint8>(
-      (((p & format->Gmask) >> format->Gshift) << format->Gloss) *
-      (ambient + diff + spec));
+      (((p & format->Gmask) >> format->Gshift) << format->Gloss) * intensity);
   Uint8 B = static_cast<Uint8>(
-      (((p & format->Bmask) >> format->Bshift) << format->Bloss) *
-      (ambient + diff + spec));
+      (((p & format->Bmask) >> format->Bshift) << format->Bloss) * intensity);
 
   pixel = SDL_MapRGB(format, R, G, B);
 }
@@ -177,8 +192,8 @@ Uint32 GetPixel(SDL_Surface* surface, int x, int y) {
   }
 }
 
-Vec4f Reflect(Vec4f& v, Vec4f& normal) {
-  return normal * 2.f * (v * normal) - v;
+Vec3f Reflect(Vec3f& v, Vec3f& normal) {
+  return normal * 2.f * (normal * v) - v;
 }
 
 }  // namespace swr

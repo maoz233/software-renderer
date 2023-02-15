@@ -57,7 +57,7 @@ void Renderer::Init() {
 void Renderer::Loop() {
   std::clog << "----- Renderer::Loop -----" << std::endl;
 
-  Vec3f light_dir(0.f, 0.f, 1.f);
+  Vec3f light(0.f, 1.f, 1.f);
 
   Vec3f eye(0.f, 0.f, 3.f);
   Vec3f center(0.0f, 0.0f, 0.f);
@@ -76,13 +76,11 @@ void Renderer::Loop() {
   this->shader_ = new PhongShader();
 
   // Uniform data for shader
-  this->shader_->SetVec3f(Vector::LIGHT, light_dir);
+  this->shader_->SetVec3f(Vector::EYE, eye);
+  this->shader_->SetVec3f(Vector::LIGHT, light);
 
-  Mat4 mvp = projection * view;
+  Mat4 mvp = viewport * projection * view;
   this->shader_->SetMat4(Matrix::MVP, mvp);
-
-  Mat4 mvp_it = mvp.Inverse().Transpose();
-  this->shader_->SetMat4(Matrix::MVP_IT, mvp_it);
 
   this->shader_->SetTexture(Texture::DIFFUSE_TEXTURE, this->diffuse_texture_);
   this->shader_->SetTexture(Texture::NORMAL_TEXTURE, this->normal_texture_);
@@ -124,10 +122,9 @@ void Renderer::Loop() {
         Vec3f vertex = this->model_->GetVertex(face[j]);
         vertex_coords.push_back(vertex);
         this->shader_->SetVec3f(Vector::VERTEX, vertex);
-        Vec4f postion{};
+        Vec3f postion{};
         this->shader_->Vertex(postion);
-        Vec4f v = viewport * postion;
-        screen_coords[j] = Vec3f(v[0] / v[3], v[1] / v[3], v[2] / v[3]);
+        screen_coords[j] = postion;
       }
 
       if (line_is_primitive) {
@@ -146,7 +143,7 @@ void Renderer::Loop() {
               this->model_->GetTextureCoords(texture_indices[j]);
         }
 
-        DrawTriangle(screen_coords, texture_coords);
+        DrawTriangle(screen_coords, vertex_coords, texture_coords);
       }
     }
 
@@ -235,6 +232,7 @@ void Renderer::CreateSurface() {
 }
 
 void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
+                            std::vector<Vec3f>& vertex_coords,
                             std::vector<Vec2f>& texture_coords) {
   // Bounding Box
   int x_min = static_cast<int>(std::round(std::min(
@@ -272,6 +270,17 @@ void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
 
       // Update z index
       (*(this->zbuffer_))[x + y * WIDTH] = z;
+
+      // Interpolated fragment coordinates
+      Vec3f fragment_position{
+          (vertex_coords[0].x * bc.x + vertex_coords[1].x * bc.y +
+           vertex_coords[2].x * bc.z),
+          (vertex_coords[0].y * bc.x + vertex_coords[1].y * bc.y +
+           vertex_coords[2].y * bc.z),
+          (vertex_coords[0].z * bc.x + vertex_coords[1].z * bc.y +
+           vertex_coords[2].z * bc.z),
+      };
+      this->shader_->SetVec3f(Vector::FRAGMENT, fragment_position);
 
       // Interpolated texture coordinates
       int u = static_cast<int>(
