@@ -51,6 +51,7 @@ void Renderer::Init() {
   LoadModel(MODEL_FILENAME);
   LoadTexture(Texture::DIFFUSE_TEXTURE, DIFFUSE_TEXTURE_FILENAME);
   LoadTexture(Texture::NORMAL_TEXTURE, NORMAL_TEXTURE_FILENAME);
+  LoadTexture(Texture::NORMAL_TANGENT_TEXTURE, NORMAL_TANGENT_TEXTURE_FILENAME);
   LoadTexture(Texture::SPECULAR_TEXTURE, SPECULAR_TEXTURE_FILENAME);
 }
 
@@ -73,7 +74,9 @@ void Renderer::Loop() {
       Viewport(static_cast<float>(WIDTH), static_cast<float>(HEIGHT));
 
   // Shader
-  this->shader_ = new Shader();
+  // this->shader_ = new Shader();
+  // this->shader_ = new PhongShader();
+  this->shader_ = new NormalMappingShader();
 
   // Uniform data for shader
   this->shader_->SetVec3f(Vector::EYE, eye);
@@ -84,6 +87,8 @@ void Renderer::Loop() {
 
   this->shader_->SetTexture(Texture::DIFFUSE_TEXTURE, this->diffuse_texture_);
   this->shader_->SetTexture(Texture::NORMAL_TEXTURE, this->normal_texture_);
+  this->shader_->SetTexture(Texture::NORMAL_TANGENT_TEXTURE,
+                            this->normal_tangent_texture_);
   this->shader_->SetTexture(Texture::SPECULAR_TEXTURE, this->specular_texture_);
 
   bool line_is_primitive = false;
@@ -137,13 +142,16 @@ void Renderer::Loop() {
           DrawLine(x0, y0, x1, y1, pixel);
         }
       } else {
+        std::vector<Vec3f> normal_coords(3);
         std::vector<Vec2f> texture_coords(3);
         for (int j = 0; j < 3; ++j) {
+          normal_coords[j] = this->model_->GetNormalCoords(normal_indices[j]);
           texture_coords[j] =
               this->model_->GetTextureCoords(texture_indices[j]);
         }
 
-        DrawTriangle(screen_coords, vertex_coords, texture_coords);
+        DrawTriangle(screen_coords, vertex_coords, normal_coords,
+                     texture_coords);
       }
     }
 
@@ -200,6 +208,9 @@ void Renderer::LoadTexture(int type, const std::string& filename) {
     case Texture::NORMAL_TEXTURE:
       this->normal_texture_ = SDL_ConvertSurface(texture, format, 0);
       break;
+    case Texture::NORMAL_TANGENT_TEXTURE:
+      this->normal_tangent_texture_ = SDL_ConvertSurface(texture, format, 0);
+      break;
     case Texture::SPECULAR_TEXTURE:
       this->specular_texture_ = SDL_ConvertSurface(texture, format, 0);
       break;
@@ -233,6 +244,7 @@ void Renderer::CreateSurface() {
 
 void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
                             std::vector<Vec3f>& vertex_coords,
+                            std::vector<Vec3f>& normal_coords,
                             std::vector<Vec2f>& texture_coords) {
   // Bounding Box
   int x_min = static_cast<int>(std::round(std::min(
@@ -243,6 +255,25 @@ void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
       std::max(screen_coords[0].x, screen_coords[1].x), screen_coords[2].x)));
   int y_max = static_cast<int>(std::round(std::max(
       std::max(screen_coords[0].y, screen_coords[1].y), screen_coords[2].y)));
+
+  // TBN Matrix
+  Vec3f edge1 = screen_coords[1] - screen_coords[0];
+  Vec3f edge2 = screen_coords[2] - screen_coords[0];
+  Vec2f delta_uv1 = texture_coords[1] - texture_coords[0];
+  Vec2f delta_uv2 = texture_coords[2] - texture_coords[0];
+  float f = 1.0f / (delta_uv1.x * delta_uv2.y - delta_uv2.x * delta_uv1.y);
+  Vec3f tagent{
+      f * (delta_uv2.y * edge1.x - delta_uv1.y * edge2.x),
+      f * (delta_uv2.y * edge1.y - delta_uv1.y * edge2.y),
+      f * (delta_uv2.y * edge1.z - delta_uv1.y * edge2.z),
+  };
+  Vec3f bitangent{
+      f * (-delta_uv2.x * edge1.x + delta_uv1.x * edge2.x),
+      f * (-delta_uv2.x * edge1.y + delta_uv1.x * edge2.y),
+      f * (-delta_uv2.x * edge1.z + delta_uv1.x * edge2.z),
+  };
+  this->shader_->SetVec3f(Vector::TANGENT, tagent);
+  this->shader_->SetVec3f(Vector::BITANGENT, bitangent);
 
   for (int x = x_min; x <= x_max; ++x) {
     for (int y = y_min; y <= y_max; ++y) {
@@ -281,6 +312,17 @@ void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
            vertex_coords[2].z * bc.z),
       };
       this->shader_->SetVec3f(Vector::FRAGMENT, fragment_position);
+
+      // Interpolated normal vectors
+      Vec3f normal{
+          (normal_coords[0].x * bc.x + normal_coords[1].x * bc.y +
+           normal_coords[2].x * bc.z),
+          (normal_coords[0].y * bc.x + normal_coords[1].y * bc.y +
+           normal_coords[2].y * bc.z),
+          (normal_coords[0].z * bc.x + normal_coords[1].z * bc.y +
+           normal_coords[2].z * bc.z),
+      };
+      this->shader_->SetVec3f(Vector::NORMAL, normal);
 
       // Interpolated texture coordinates
       int u = static_cast<int>(

@@ -19,9 +19,14 @@ namespace swr {
 
 enum Matrix { MVP };
 
-enum Vector { VERTEX, FRAGMENT, LIGHT, EYE };
+enum Vector { VERTEX, FRAGMENT, LIGHT, EYE, NORMAL, TANGENT, BITANGENT };
 
-enum Texture { DIFFUSE_TEXTURE, NORMAL_TEXTURE, SPECULAR_TEXTURE };
+enum Texture {
+  DIFFUSE_TEXTURE,
+  NORMAL_TEXTURE,
+  NORMAL_TANGENT_TEXTURE,
+  SPECULAR_TEXTURE
+};
 
 class Shader {
  public:
@@ -42,9 +47,13 @@ class Shader {
   Vec3f light_;
   Vec3f fragment_;
   Vec3f vertex_;
+  Vec3f normal_;
+  Vec3f tangent_;
+  Vec3f bitangent_;
   Mat4 mvp_;
   SDL_Surface* diffuse_texture_;
   SDL_Surface* normal_texture_;
+  SDL_Surface* normal_tangent_texture_;
   SDL_Surface* specular_texture_;
 };
 
@@ -52,6 +61,14 @@ class PhongShader : public Shader {
  public:
   PhongShader() = default;
   virtual ~PhongShader() = default;
+
+  void Fragment(Uint32& pixel) override;
+};
+
+class NormalMappingShader : public Shader {
+ public:
+  NormalMappingShader() = default;
+  virtual ~NormalMappingShader() = default;
 
   void Fragment(Uint32& pixel) override;
 };

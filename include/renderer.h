@@ -28,15 +28,19 @@ const std::string DIFFUSE_TEXTURE_FILENAME(
     "../../obj/diablo3/diablo3_pose_diffuse.tga");
 const std::string NORMAL_TEXTURE_FILENAME(
     "../../obj/diablo3/diablo3_pose_nm.tga");
+const std::string NORMAL_TANGENT_TEXTURE_FILENAME(
+    "../../obj/diablo3/diablo3_pose_nm_tangent.tga");
 const std::string SPECULAR_TEXTURE_FILENAME(
     "../../obj/diablo3/diablo3_pose_spec.tga");
+
 #endif
 #if __APPLE__
 const std::string MODEL_FILENAME("../obj/diablo3/diablo3_pose.obj");
 const std::string DIFFUSE_TEXTURE_FILENAME(
     "../obj/diablo3/diablo3_pose_diffuse.tga");
-
 const std::string NORMAL_TEXTURE_FILENAME("../obj/diablo3/diablo3_pose_nm.tga");
+const std::string NORMAL_TANGENT_TEXTURE_FILENAME(
+    "../obj/diablo3/diablo3_pose_nm_tangent.tga");
 const std::string SPECULAR_TEXTURE_FILENAME(
     "../obj/diablo3/diablo3_pose_spec.tga");
 #endif
@@ -59,6 +63,7 @@ class Renderer {
 
   void DrawTriangle(std::vector<Vec3f>& screen_coords,
                     std::vector<Vec3f>& vertex_coords,
+                    std::vector<Vec3f>& normal_coords,
                     std::vector<Vec2f>& texture_coords);
   // Bresenham's line algorithm
   void DrawLine(int x0, int y0, int x1, int y1, Uint32 pixel);
@@ -76,6 +81,7 @@ class Renderer {
   std::vector<int>* zbuffer_;
   SDL_Surface* diffuse_texture_;
   SDL_Surface* normal_texture_;
+  SDL_Surface* normal_tangent_texture_;
   SDL_Surface* specular_texture_;
   Shader* shader_;
 };

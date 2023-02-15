@@ -61,13 +61,13 @@ template <typename T>
 Vec2<T>::Vec2(T x_, T y_) : x(x_), y(y_) {}
 
 template <typename T>
-Vec2<T> Vec2<T>::operator+(const Vec2<T>& v) const {
-  return Vec2<T>(x + v.x, y + v.y);
+Vec2<T> Vec2<T>::operator+(const Vec2<T>& v_) const {
+  return Vec2<T>(x + v_.x, y + v_.y);
 }
 
 template <typename T>
-Vec2<T> Vec2<T>::operator-(const Vec2<T>& v) const {
-  return Vec2<T>(x - v.x, y - v.y);
+Vec2<T> Vec2<T>::operator-(const Vec2<T>& v_) const {
+  return Vec2<T>(x - v_.x, y - v_.y);
 }
 
 template <typename T>
@@ -127,7 +127,7 @@ struct Vec3 {
 #if _WIN32
   inline void operator=(const Vec3<T>& v);
 #endif
-  inline T operator[](int index) const;
+  inline T& operator[](int index);
   // Dot product
   inline T operator*(const Vec3<T>& v) const;
 
@@ -174,7 +174,7 @@ void Vec3<T>::operator=(const Vec3<T>& v) {
 #endif
 
 template <typename T>
-T Vec3<T>::operator[](int index) const {
+T& Vec3<T>::operator[](int index) {
   assert(index >= 0 && index < 3);
 
   return this->raw[index];
@@ -302,6 +302,7 @@ struct Mat {
 #endif
 
   std::vector<float>& operator[](int index);
+  Vec3f operator*(Vec3f& v);
   Vec4f operator*(Vec4f& v);
   template <int O>
   Mat<M, O> operator*(Mat<N, O> mat) const;
@@ -352,6 +353,21 @@ std::vector<float>& Mat<M, N>::operator[](int index) {
   assert(index >= 0 && index < M);
 
   return this->m[index];
+}
+
+template <int M, int N>
+Vec3f Mat<M, N>::operator*(Vec3f& v) {
+  assert(M == 3 && N == 3);
+
+  Vec3f vec{};
+
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
+      vec[i] += this->m[i][j] * v[j];
+    }
+  }
+
+  return vec;
 }
 
 template <int M, int N>
@@ -483,6 +499,7 @@ Mat<M, N> Mat<M, N>::Identity() {
 }
 
 typedef Mat<4, 4> Mat4;
+typedef Mat<3, 3> Mat3;
 
 Mat4 LookAt(Vec3f& eye, Vec3f& center);
 
