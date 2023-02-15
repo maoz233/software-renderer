@@ -87,8 +87,10 @@ void Shader::Fragment(Uint32& pixel) {
   SDL_GetRGB(pixel_normal, this->normal_texture_->format, &normal_r, &normal_g,
              &normal_b);
 
-  Vec3f normal{static_cast<float>(normal_r), static_cast<float>(normal_g),
-               static_cast<float>(normal_b)};
+  Vec3f normal = Vec3f{static_cast<float>(normal_r) * 2.f - 255.f,
+                       static_cast<float>(normal_g) * 2.f - 255.f,
+                       static_cast<float>(normal_b) * 2.f - 255.f}
+                     .Normalize();
 
   Vec3f light_dir{this->light_ - this->fragment_};
 
@@ -122,10 +124,10 @@ void PhongShader::Fragment(Uint32& pixel) {
   SDL_GetRGB(pixel_normal, this->normal_texture_->format, &normal_r, &normal_g,
              &normal_b);
 
-  Vec3f normal =
-      Vec3f{static_cast<float>(normal_r), static_cast<float>(normal_g),
-            static_cast<float>(normal_b)}
-          .Normalize();
+  Vec3f normal = Vec3f{static_cast<float>(normal_r) * 2.f - 255.f,
+                       static_cast<float>(normal_g) * 2.f - 255.f,
+                       static_cast<float>(normal_b) * 2.f - 255.f}
+                     .Normalize();
 
   Vec3f light_dir = (this->light_ - this->fragment_).Normalize();
 
