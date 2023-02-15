@@ -57,7 +57,7 @@ void Renderer::Init() {
 void Renderer::Loop() {
   std::clog << "----- Renderer::Loop -----" << std::endl;
 
-  Vec3f light(0.f, 1.f, 1.f);
+  Vec3f light(0.f, 0.f, 1.f);
 
   Vec3f eye(0.f, 0.f, 3.f);
   Vec3f center(0.0f, 0.0f, 0.f);
@@ -73,7 +73,7 @@ void Renderer::Loop() {
       Viewport(static_cast<float>(WIDTH), static_cast<float>(HEIGHT));
 
   // Shader
-  this->shader_ = new PhongShader();
+  this->shader_ = new Shader();
 
   // Uniform data for shader
   this->shader_->SetVec3f(Vector::EYE, eye);
