@@ -259,6 +259,13 @@ void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
   // TBN Matrix
   Vec3f edge1 = screen_coords[1] - screen_coords[0];
   Vec3f edge2 = screen_coords[2] - screen_coords[0];
+
+  // Backface culling
+  Vec3f clockwise = edge1 ^ edge2;
+  if (clockwise.z < 0.f) {
+    return;
+  }
+
   Vec2f delta_uv1 = texture_coords[1] - texture_coords[0];
   Vec2f delta_uv2 = texture_coords[2] - texture_coords[0];
   float f = 1.0f / (delta_uv1.x * delta_uv2.y - delta_uv2.x * delta_uv1.y);
