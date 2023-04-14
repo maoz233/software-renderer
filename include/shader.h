@@ -12,7 +12,7 @@
 #define SOFTWARE_RENDERER_INCLUDE_SHADER_H_
 #include <vector>
 
-#include "SDL.h"
+#include "image.h"
 #include "utils.h"
 
 namespace swr {
@@ -36,10 +36,10 @@ class Shader {
   void SetVec2i(Vec2i& vec);
   void SetVec3f(int name, Vec3f& vec);
   void SetMat4(int type, Mat4& mat);
-  void SetTexture(int name, SDL_Surface* texture);
+  void SetTexture(int name, Image* texture);
 
   virtual void Vertex(Vec3f& position);
-  virtual void Fragment(Uint32& pixel);
+  virtual void Fragment(uint32_t& pixel);
 
  protected:
   Vec2i uv_;
@@ -51,10 +51,10 @@ class Shader {
   Vec3f tangent_;
   Vec3f bitangent_;
   Mat4 mvp_;
-  SDL_Surface* diffuse_texture_;
-  SDL_Surface* normal_texture_;
-  SDL_Surface* normal_tangent_texture_;
-  SDL_Surface* specular_texture_;
+  Image* diffuse_texture_;
+  Image* normal_texture_;
+  Image* normal_tangent_texture_;
+  Image* specular_texture_;
 };
 
 class PhongShader : public Shader {
@@ -62,7 +62,7 @@ class PhongShader : public Shader {
   PhongShader() = default;
   virtual ~PhongShader() = default;
 
-  void Fragment(Uint32& pixel) override;
+  void Fragment(uint32_t& pixel) override;
 };
 
 class NormalMappingShader : public Shader {
@@ -70,12 +70,14 @@ class NormalMappingShader : public Shader {
   NormalMappingShader() = default;
   virtual ~NormalMappingShader() = default;
 
-  void Fragment(Uint32& pixel) override;
+  void Fragment(uint32_t& pixel) override;
 };
 
-Uint32 GetPixel(SDL_Surface* surface, int x, int y);
+Vec3f Sample(Image* surface, int x, int y);
 
 Vec3f Reflect(Vec3f& v, Vec3f& normal);
+
+uint32_t GetColor(const Vec3f& color);
 
 }  // namespace swr
 

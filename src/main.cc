@@ -10,7 +10,7 @@
  */
 #include <iostream>
 
-#include "renderer.h"
+#include "application.h"
 
 int main(int argc, char* argv[]) {
   std::clog << "----- Starting -----" << std::endl;
@@ -20,12 +20,10 @@ int main(int argc, char* argv[]) {
     std::clog << "----- Arguments No." << i + 1 << ": " << argv[i] << std::endl;
   }
 
-  swr::Renderer renderer{};
+  swr::Application app{};
 
   try {
-    renderer.Init();
-    renderer.Loop();
-    renderer.Terminate();
+    app.Run();
   } catch (const std::exception& e) {
     std::cerr << e.what() << '\n';
     return EXIT_FAILURE;

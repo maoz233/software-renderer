@@ -87,7 +87,7 @@ template <typename T>
 T Vec2<T>::operator[](int index) const {
   assert(index >= 0 && index < 2);
 
-  return this->raw[index];
+  returnraw[index];
 }
 
 template <typename T>
@@ -123,6 +123,7 @@ struct Vec3 {
   inline Vec3<T> operator^(const Vec3<T>& v) const;
   inline Vec3<T> operator+(const Vec3<T>& v) const;
   inline Vec3<T> operator-(const Vec3<T>& v) const;
+  inline Vec3<T> operator-(const float f) const;
   inline Vec3<T> operator*(float f) const;
 #if _WIN32
   inline void operator=(const Vec3<T>& v);
@@ -164,6 +165,11 @@ Vec3<T> Vec3<T>::operator-(const Vec3<T>& v) const {
   return Vec3<T>(x - v.x, y - v.y, z - v.z);
 }
 
+template <typename T>
+Vec3<T> Vec3<T>::operator-(float f) const {
+  return Vec3<T>(x - f, y - f, z - f);
+}
+
 #if _WIN32
 template <typename T>
 void Vec3<T>::operator=(const Vec3<T>& v) {
@@ -177,7 +183,7 @@ template <typename T>
 T& Vec3<T>::operator[](int index) {
   assert(index >= 0 && index < 3);
 
-  return this->raw[index];
+  return raw[index];
 }
 
 template <typename T>
@@ -270,7 +276,7 @@ template <typename T>
 T& Vec4<T>::operator[](int index) {
   assert(index >= 0 && index < 4);
 
-  return this->raw[index];
+  return raw[index];
 }
 
 template <typename T>
@@ -332,7 +338,7 @@ Mat<M, N>::Mat(Mat<I, J> mat)
 
   for (int i = 0; i < I; ++i) {
     for (int j = 0; j < J; ++j) {
-      this->m[i][j] = mat[i][j];
+      m[i][j] = mat[i][j];
     }
   }
 }
@@ -342,7 +348,7 @@ template <int M, int N>
 void Mat<M, N>::operator=(Mat<M, N>& mat) {
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
-      this->m[i][j] = mat[i][j];
+      m[i][j] = mat[i][j];
     }
   }
 }
@@ -352,7 +358,7 @@ template <int M, int N>
 std::vector<float>& Mat<M, N>::operator[](int index) {
   assert(index >= 0 && index < M);
 
-  return this->m[index];
+  return m[index];
 }
 
 template <int M, int N>
@@ -363,7 +369,7 @@ Vec3f Mat<M, N>::operator*(Vec3f& v) {
 
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
-      vec[i] += this->m[i][j] * v[j];
+      vec[i] += m[i][j] * v[j];
     }
   }
 
@@ -378,7 +384,7 @@ Vec4f Mat<M, N>::operator*(Vec4f& v) {
 
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
-      vec[i] += this->m[i][j] * v[j];
+      vec[i] += m[i][j] * v[j];
     }
   }
 
@@ -393,7 +399,7 @@ Mat<M, O> Mat<M, N>::operator*(Mat<N, O> mat) const {
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < O; ++j) {
       for (int k = 0; k < N; ++k) {
-        product[i][j] += this->m[i][k] * mat[k][j];
+        product[i][j] += m[i][k] * mat[k][j];
       }
     }
   }
@@ -419,7 +425,7 @@ Mat<M, N> Mat<M, N>::Transpose() const {
 
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
-      mat[j][i] = this->m[i][j];
+      mat[j][i] = m[i][j];
     }
   }
 
@@ -435,7 +441,7 @@ Mat<M, N> Mat<M, N>::Inverse() const {
   // Copy original matrix
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
-      mat[i][j] = this->m[i][j];
+      mat[i][j] = m[i][j];
     }
   }
   // Add a row with each element is 1

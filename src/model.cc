@@ -42,7 +42,7 @@ Model::Model(const std::string& filename) : vertices_(), faces_() {
         in_string_stream >> vertex.raw[i];
       }
 
-      this->vertices_.push_back(vertex);
+      vertices_.push_back(vertex);
     } else if (!line.compare(0, 2, "f ")) {
       in_string_stream >> trash;
 
@@ -62,9 +62,9 @@ Model::Model(const std::string& filename) : vertices_(), faces_() {
         normal_indices.push_back(normal_index);
       }
 
-      this->faces_.push_back(face);
-      this->texture_indices_.push_back(texture_indices);
-      this->normal_indices_.push_back(normal_indices);
+      faces_.push_back(face);
+      texture_indices_.push_back(texture_indices);
+      normal_indices_.push_back(normal_indices);
     } else if (!line.compare(0, 3, "vt ")) {
       in_string_stream >> trash >> trash;
 
@@ -74,7 +74,7 @@ Model::Model(const std::string& filename) : vertices_(), faces_() {
         in_string_stream >> texture_coords.raw[i];
       }
 
-      this->texture_coords_.push_back(texture_coords);
+      texture_coords_.push_back(texture_coords);
       in_string_stream >> trash;
     } else if (!line.compare(0, 3, "vn ")) {
       in_string_stream >> trash >> trash;
@@ -85,41 +85,37 @@ Model::Model(const std::string& filename) : vertices_(), faces_() {
         in_string_stream >> normal_coords.raw[i];
       }
 
-      this->normal_coords_.push_back(normal_coords);
+      normal_coords_.push_back(normal_coords);
       in_string_stream >> trash;
     }
   }
 
-  std::clog << "----- Model: #Vertices: " << this->vertices_.size()
-            << ", #Faces: " << this->faces_.size() << " -----" << std::endl;
+  std::clog << "----- Model: #Vertices: " << vertices_.size()
+            << ", #Faces: " << faces_.size() << " -----" << std::endl;
 }
 
 Model::~Model() { std::clog << "----- Model::~Model -----" << std::endl; }
 
 int Model::GetVerticesCount() const {
-  return static_cast<int>(this->vertices_.size());
+  return static_cast<int>(vertices_.size());
 }
 
-int Model::GetFacesCount() const {
-  return static_cast<int>(this->faces_.size());
-}
+int Model::GetFacesCount() const { return static_cast<int>(faces_.size()); }
 
-Vec3f Model::GetVertex(int index) const { return this->vertices_[index]; }
+Vec3f Model::GetVertex(int index) const { return vertices_[index]; }
 
-std::vector<int> Model::GetFace(int index) const { return this->faces_[index]; }
+std::vector<int> Model::GetFace(int index) const { return faces_[index]; }
 
 std::vector<int> Model::GetTextureIndices(int index) const {
-  return this->texture_indices_[index];
+  return texture_indices_[index];
 }
 
 Vec2f Model::GetTextureCoords(int index) const {
-  return this->texture_coords_[index];
+  return texture_coords_[index];
 }
 
 std::vector<int> Model::GetNormalIndices(int index) const {
-  return this->normal_indices_[index];
+  return normal_indices_[index];
 }
-Vec3f Model::GetNormalCoords(int index) const {
-  return this->normal_coords_[index];
-}
+Vec3f Model::GetNormalCoords(int index) const { return normal_coords_[index]; }
 }  // namespace swr
