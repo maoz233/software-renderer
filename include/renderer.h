@@ -72,6 +72,12 @@ class Renderer : public Layer {
   VkCommandPool& command_pool_;
 
   float delta_time_ = 0.f;
+  bool pause_ = true;
+  int pre_primitive_mode_ = 1;
+  int primitive_mode_ = 1;
+  int pre_shading_mode = 2;
+  int shading_mode_ = 2;
+  bool need_reset_ = false;
 };
 }  // namespace swr
 

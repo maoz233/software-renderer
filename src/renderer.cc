@@ -142,23 +142,42 @@ void Renderer::OnUIRender() {
   ImGui::EndChild();
 
   //  imgui child window: render
-  ImGui::BeginChild("Render", ImVec2(0.f, 100.f), true, window_flags);
+  ImGui::BeginChild("Render", ImVec2(0.f, 220.f), true, window_flags);
 
   if (ImGui::BeginMenuBar()) {
     ImGui::BeginMenu("Render", false);
     ImGui::EndMenuBar();
   }
 
-  // imgui: render button
-  if (ImGui::Button("Render")) {
-    Render();
+  // imgui: primitive mode radio
+  ImGui::Text("Primitive Mode:");
+  ImGui::Indent();
+  ImGui::RadioButton("Frame", &primitive_mode_, 0);
+  ImGui::RadioButton("Triangle", &primitive_mode_, 1);
+  ImGui::Unindent();
+
+  if (pre_primitive_mode_ != primitive_mode_) {
+    need_reset_ = true;
+    pre_primitive_mode_ = primitive_mode_;
   }
 
-  // imgui: play/pause button
-  // if (ImGui::Button(play_button_label_)) {
-  //   is_playing_ = !is_playing_;
-  //   play_button_label_ = is_playing_ ? "Pause" : "Play";
-  // }
+  // imgui: shading mode radio
+  ImGui::Text("Shading Mode:");
+  ImGui::Indent();
+  ImGui::RadioButton("Diffuse", &shading_mode_, 0);
+  ImGui::RadioButton("Phong", &shading_mode_, 1);
+  ImGui::RadioButton("Normal Mapping", &shading_mode_, 2);
+  ImGui::Unindent();
+
+  if (pre_shading_mode != shading_mode_) {
+    need_reset_ = true;
+    pre_shading_mode = shading_mode_;
+  }
+
+  // imgui: render button
+  if (ImGui::Button(pause_ ? "Render" : "Pause")) {
+    pause_ = !pause_;
+  }
 
   ImGui::EndChild();
   ImGui::PopStyleVar();
@@ -166,6 +185,10 @@ void Renderer::OnUIRender() {
 
   ImGui::End();
   ImGui::PopStyleVar();
+
+  if (!pause_) {
+    Render();
+  }
 }
 
 void Renderer::Render() {
@@ -180,6 +203,12 @@ void Renderer::Render() {
     surface_ = new Image(width_, height_, physical_device_, device_,
                          graphics_queue_, command_pool_);
 
+    need_reset_ = true;
+  }
+
+  if (need_reset_) {
+    need_reset_ = false;
+
     // clear previous image data
     delete[] surface_data_;
     // allocate new image data
@@ -187,7 +216,7 @@ void Renderer::Render() {
     memset(surface_data_, 0, width_ * height_ * sizeof(uint32_t));
 
     // clear previous zbuffer data
-    delete[] zbuffer_;
+    delete zbuffer_;
     // allocate new zbuffer
     zbuffer_ = new std::vector<int>(height_ * width_, INT_MIN);
   }
@@ -208,9 +237,17 @@ void Renderer::Render() {
       Viewport(static_cast<float>(width_), static_cast<float>(height_));
 
   // Shader
-  // shader_ = new Shader();
-  // shader_ = new PhongShader();
-  shader_ = new NormalMappingShader();
+  switch (shading_mode_) {
+    case 1:
+      shader_ = new PhongShader();
+      break;
+    case 2:
+      shader_ = new NormalMappingShader();
+      break;
+    default:
+      shader_ = new Shader();
+      break;
+  }
 
   // Uniform data for shader
   shader_->SetVec3f(Vector::EYE, eye);
@@ -223,8 +260,6 @@ void Renderer::Render() {
   shader_->SetTexture(Texture::NORMAL_TEXTURE, normal_texture_);
   shader_->SetTexture(Texture::NORMAL_TANGENT_TEXTURE, normal_tangent_texture_);
   shader_->SetTexture(Texture::SPECULAR_TEXTURE, specular_texture_);
-
-  bool line_is_primitive = false;
 
   // Put rendering logic here
   for (int i = 0; i < model_->GetFacesCount(); ++i) {
@@ -244,7 +279,7 @@ void Renderer::Render() {
       screen_coords[j] = postion;
     }
 
-    if (line_is_primitive) {
+    if (primitive_mode_ == 0) {
       for (int j = 0; j < 3; ++j) {
         int x0 = static_cast<int>(std::round(screen_coords[j].x));
         int y0 = static_cast<int>(std::round(screen_coords[j].y));
