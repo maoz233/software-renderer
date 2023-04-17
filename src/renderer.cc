@@ -13,7 +13,6 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <execution>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -405,7 +404,6 @@ void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
     vertical_iterator.push_back(y);
   }
 
-#ifdef __APPLE__
   for (int x = x_min; x <= x_max; ++x) {
     for (int y = y_min; y <= y_max; ++y) {
       // Avoid coordinate beyond surface
@@ -474,80 +472,6 @@ void Renderer::DrawTriangle(std::vector<Vec3f>& screen_coords,
       SetPixel(x, y, pixel);
     }
   }
-#else
-  std::for_each(
-      std::execution::par, horizontal_iterator.begin(),
-      horizontal_iterator.end(), [&](int x) {
-        std::for_each(
-            std::execution::par, vertical_iterator.begin(),
-            vertical_iterator.end(), [&](int y) {
-              // Avoid coordinate beyond surface
-              if (x < 0 || y < 0 || x >= static_cast<int>(width_) ||
-                  y >= static_cast<int>(height_)) {
-                return;
-              }
-
-              Vec3f bc = Barycentric(static_cast<float>(x),
-                                     static_cast<float>(y), screen_coords[0],
-                                     screen_coords[1], screen_coords[2]);
-              if (bc.x < 1e-5 || bc.y < 1e-5 || bc.z < 1e-5) {
-                return;
-              }
-
-              // Interpolated z index
-              int z = static_cast<int>(std::round(screen_coords[0].z * bc.x +
-                                                  screen_coords[1].z * bc.y +
-                                                  screen_coords[2].z * bc.z));
-
-              // Depth test
-              if ((*(zbuffer_))[x + y * width_] >= z) {
-                return;
-              }
-
-              // Update z index
-              (*(zbuffer_))[x + y * width_] = z;
-
-              // Interpolated fragment coordinates
-              Vec3f fragment_position{
-                  (vertex_coords[0].x * bc.x + vertex_coords[1].x * bc.y +
-                   vertex_coords[2].x * bc.z),
-                  (vertex_coords[0].y * bc.x + vertex_coords[1].y * bc.y +
-                   vertex_coords[2].y * bc.z),
-                  (vertex_coords[0].z * bc.x + vertex_coords[1].z * bc.y +
-                   vertex_coords[2].z * bc.z),
-              };
-              shader_->SetVec3f(Vector::FRAGMENT, fragment_position);
-
-              // Interpolated normal vectors
-              Vec3f normal{
-                  (normal_coords[0].x * bc.x + normal_coords[1].x * bc.y +
-                   normal_coords[2].x * bc.z),
-                  (normal_coords[0].y * bc.x + normal_coords[1].y * bc.y +
-                   normal_coords[2].y * bc.z),
-                  (normal_coords[0].z * bc.x + normal_coords[1].z * bc.y +
-                   normal_coords[2].z * bc.z),
-              };
-              shader_->SetVec3f(Vector::NORMAL, normal);
-
-              // Interpolated texture coordinates
-              int u = static_cast<int>(std::round(
-                  (texture_coords[0].u * bc.x + texture_coords[1].u * bc.y +
-                   texture_coords[2].u * bc.z) *
-                  diffuse_texture_->GetWidth()));
-              int v = static_cast<int>(std::round(
-                  (texture_coords[0].v * bc.x + texture_coords[1].v * bc.y +
-                   texture_coords[2].v * bc.z) *
-                  diffuse_texture_->GetHeight()));
-              Vec2i uv{u, v};
-              shader_->SetVec2i(uv);
-
-              uint32_t pixel = 0;
-              shader_->Fragment(pixel);
-
-              SetPixel(x, y, pixel);
-            });
-      });
-#endif
 }
 
 void Renderer::DrawLine(int x0, int y0, int x1, int y1, uint32_t pixel) {
