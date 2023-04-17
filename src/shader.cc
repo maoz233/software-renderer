@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "texture.h"
 #include "utils.h"
 
 #if _WIN32
@@ -63,18 +64,18 @@ void Shader::SetMat4(int name, Mat4& mat) {
   }
 }
 
-void Shader::SetTexture(int name, Image* texture) {
+void Shader::SetTexture(int name, Texture* texture) {
   switch (name) {
-    case Texture::DIFFUSE_TEXTURE:
+    case ETexture::DIFFUSE_TEXTURE:
       diffuse_texture_ = texture;
       break;
-    case Texture::NORMAL_TEXTURE:
+    case ETexture::NORMAL_TEXTURE:
       normal_texture_ = texture;
       break;
-    case Texture::NORMAL_TANGENT_TEXTURE:
+    case ETexture::NORMAL_TANGENT_TEXTURE:
       normal_tangent_texture_ = texture;
       break;
-    case Texture::SPECULAR_TEXTURE:
+    case ETexture::SPECULAR_TEXTURE:
       specular_texture_ = texture;
       break;
     default:
@@ -178,7 +179,7 @@ void NormalMappingShader::Fragment(uint32_t& pixel) {
   pixel = GetColor(pixel_diffuse * intensity + pixel_specular * spec);
 }
 
-Vec3f Sample(Image* surface, int x, int y) {
+Vec3f Sample(Texture* surface, int x, int y) {
   uint8_t* imageData = surface->GetData();
 
   uint8_t r =

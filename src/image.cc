@@ -152,7 +152,7 @@ void Image::SetData(const void* data) {
   // map data to memory
   void* map;
   vkMapMemory(device_, staging_buffer_memory_, 0, image_size, 0, &map);
-  memcpy(map, data, static_cast<size_t>(image_size));
+  memcpy(map, data, image_size);
   VkMappedMemoryRange range[1]{};
   range[0].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
   range[0].memory = staging_buffer_memory_;
@@ -173,11 +173,14 @@ void Image::SetData(const void* data) {
 
 uint8_t* Image::GetData() {
   size_t image_size = width_ * height_ * 4;
+  uint8_t* data = new uint8_t[image_size];
 
-  void* data;
-  vkMapMemory(device_, staging_buffer_memory_, 0, image_size, 0, &data);
+  void* map;
+  vkMapMemory(device_, staging_buffer_memory_, 0, image_size, 0, &map);
+  memcpy(data, map, image_size);
+  vkUnmapMemory(device_, staging_buffer_memory_);
 
-  return reinterpret_cast<uint8_t*>(data);
+  return data;
 }
 
 void Image::Resize(uint32_t width, uint32_t height) {

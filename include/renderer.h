@@ -17,13 +17,14 @@
 #include "layer.h"
 #include "model.h"
 #include "shader.h"
+#include "texture.h"
 #include "utils.h"
 
 namespace swr {
 
 class Renderer : public Layer {
  public:
-  Renderer() = default;
+  Renderer() = delete;
   Renderer(VkPhysicalDevice& physical_device, VkDevice& device,
            VkQueue& graphics_queue, VkCommandPool& command_pool);
   ~Renderer();
@@ -60,10 +61,10 @@ class Renderer : public Layer {
   Image* surface_ = nullptr;
   Model* model_;
   std::vector<int>* zbuffer_ = nullptr;
-  Image* diffuse_texture_ = nullptr;
-  Image* normal_texture_ = nullptr;
-  Image* normal_tangent_texture_ = nullptr;
-  Image* specular_texture_ = nullptr;
+  Texture* diffuse_texture_ = nullptr;
+  Texture* normal_texture_ = nullptr;
+  Texture* normal_tangent_texture_ = nullptr;
+  Texture* specular_texture_ = nullptr;
   Shader* shader_;
 
   VkPhysicalDevice& physical_device_;

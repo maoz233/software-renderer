@@ -87,7 +87,7 @@ template <typename T>
 T Vec2<T>::operator[](int index) const {
   assert(index >= 0 && index < 2);
 
-  returnraw[index];
+  return raw[index];
 }
 
 template <typename T>

@@ -12,7 +12,7 @@
 #define SOFTWARE_RENDERER_INCLUDE_SHADER_H_
 #include <vector>
 
-#include "image.h"
+#include "texture.h"
 #include "utils.h"
 
 namespace swr {
@@ -21,7 +21,7 @@ enum Matrix { MVP };
 
 enum Vector { VERTEX, FRAGMENT, LIGHT, EYE, NORMAL, TANGENT, BITANGENT };
 
-enum Texture {
+enum ETexture {
   DIFFUSE_TEXTURE,
   NORMAL_TEXTURE,
   NORMAL_TANGENT_TEXTURE,
@@ -36,7 +36,7 @@ class Shader {
   void SetVec2i(Vec2i& vec);
   void SetVec3f(int name, Vec3f& vec);
   void SetMat4(int type, Mat4& mat);
-  void SetTexture(int name, Image* texture);
+  void SetTexture(int name, Texture* texture);
 
   virtual void Vertex(Vec3f& position);
   virtual void Fragment(uint32_t& pixel);
@@ -51,10 +51,10 @@ class Shader {
   Vec3f tangent_;
   Vec3f bitangent_;
   Mat4 mvp_;
-  Image* diffuse_texture_;
-  Image* normal_texture_;
-  Image* normal_tangent_texture_;
-  Image* specular_texture_;
+  Texture* diffuse_texture_;
+  Texture* normal_texture_;
+  Texture* normal_tangent_texture_;
+  Texture* specular_texture_;
 };
 
 class PhongShader : public Shader {
@@ -73,7 +73,7 @@ class NormalMappingShader : public Shader {
   void Fragment(uint32_t& pixel) override;
 };
 
-Vec3f Sample(Image* surface, int x, int y);
+Vec3f Sample(Texture* surface, int x, int y);
 
 Vec3f Reflect(Vec3f& v, Vec3f& normal);
 
